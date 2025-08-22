@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from tools.weather import get_weather
 from tools.places import find_places_of_interest 
+from tools.youtube import find_youtube_video
 #initialize 
 app = FastAPI(
     title="Journey AI Tools",
@@ -41,6 +42,15 @@ def places_endpoint(request: PlacesRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/tools/find_youtube_video") 
+def youtube_endpoint(request: WeatherRequest):
+    """API endpoint to find a YouTube video for a destination."""
+    try:
+        video_data = find_youtube_video(destination=request.destination)
+        return {"result": video_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def read_root():

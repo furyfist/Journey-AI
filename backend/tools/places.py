@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv
-API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+API_KEY = os.getenv("GOOGLE_MAPS_API_KEY") # not able to get this api key
 
 def find_places_of_interest(destination: str, interest: str) -> str:
     """
@@ -13,7 +13,7 @@ def find_places_of_interest(destination: str, interest: str) -> str:
         return "Api Error"
     
     try:
-        gmaps = googlemaps.Clint(key=API_KEY)
+        gmaps = googlemaps.Client(key=API_KEY)
 
         query = f"{interest} in {destination}"
 
