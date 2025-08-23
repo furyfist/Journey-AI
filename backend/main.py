@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from portia import Config, Portia, LLMProvider, InvalidAgentOutputError
+from portia import Config, Portia, LLMProvider
 
 # --- Load Environment Variables ---
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -32,53 +32,76 @@ app.add_middleware(
 )
 
 # --- Portia Agent Configuration ---
-portia_agent = None
+# We now create TWO separate agents, one for each role.
+
+RESEARCHER_PROMPT = """
+You are an expert travel research assistant. Your ONLY job is to use your search tool to find information relevant to the user's query.
+Return all the information you find as a single, detailed block of text. Do not add any conversational fluff or summaries.
+"""
+
+SYNTHESIZER_PROMPT = """
+You are an expert travel itinerary planner. You will be given a block of pre-researched text.
+Your ONLY job is to synthesize and organize this information into a clear, helpful, and beautifully formatted travel itinerary.
+Use markdown for formatting, including headings, bold text, and lists. If the provided data is insufficient, state that clearly.
+"""
+
+researcher_agent = None
+synthesizer_agent = None
+
 try:
     if not os.getenv("GOOGLE_API_KEY") or not os.getenv("PORTIA_API_KEY"):
         raise ValueError("API keys not found in .env file")
-
-    SYSTEM_PROMPT = """
-    You are Journey AI, a helpful travel research assistant. 
-    Your primary job is to use your search tool to find information related to the user's prompt and then synthesize that information into a coherent final answer.
-    """
     
-    config = Config.from_default(
+    # --- Create Researcher Agent ---
+    researcher_config = Config.from_default(
         llm_provider=LLMProvider.GOOGLE,
         default_model="google/gemini-1.5-flash",
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=RESEARCHER_PROMPT,
         portia_api_key=os.getenv("PORTIA_API_KEY")
     )
-    portia_agent = Portia(config=config)
-    print("✅ Portia Agent initialized successfully.")
+    researcher_agent = Portia(config=researcher_config)
+    print("✅ Researcher Agent initialized successfully.")
+
+    # --- Create Synthesizer Agent ---
+    synthesizer_config = Config.from_default(
+        llm_provider=LLMProvider.GOOGLE,
+        default_model="google/gemini-1.5-flash",
+        system_prompt=SYNTHESIZER_PROMPT,
+        portia_api_key=os.getenv("PORTIA_API_KEY")
+    )
+    synthesizer_agent = Portia(config=synthesizer_config)
+    print("✅ Synthesizer Agent initialized successfully.")
+
 except Exception as e:
-    print(f"❌ Error initializing Portia Agent: {e}")
+    print(f"❌ Error initializing Portia Agents: {e}")
 
 # --- API Endpoint ---
 @app.post("/chat", response_model=ItineraryResponse)
 async def chat_with_agent(request: PromptRequest):
-    if not portia_agent:
-        raise HTTPException(status_code=500, detail="Agent not initialized. Check backend server logs.")
+    if not researcher_agent or not synthesizer_agent:
+        raise HTTPException(status_code=500, detail="One or more agents are not initialized. Check backend server logs.")
 
-    print(f"Received prompt: {request.prompt}")
-    
     try:
-        # We run the agent with the user's prompt
-        response_object = portia_agent.run(request.prompt)
-        final_output = response_object.outputs.final_output
+        # --- STAGE 1: RESEARCH ---
+        print("Stage 1: Starting research...")
+        research_result = researcher_agent.run(request.prompt)
+        raw_data = str(research_result.outputs.final_output)
+        print(f"Stage 1: Research complete.")
 
-        # The response from Portia can sometimes be an object, not a string.
-        # We'll safely convert it to a string to avoid errors.
-        if not isinstance(final_output, str):
-            final_output = str(final_output)
+        # --- STAGE 2: SYNTHESIS ---
+        print("Stage 2: Starting synthesis...")
+        synthesis_prompt = (
+            "Here is the raw data I have gathered. Please synthesize it into a final travel plan for me:\n\n"
+            "--- RAW DATA ---\n"
+            f"{raw_data}\n"
+            "--- END RAW DATA ---"
+        )
+        synthesis_result = synthesizer_agent.run(synthesis_prompt)
+        final_itinerary = str(synthesis_result.outputs.final_output)
+        
+        print("Stage 2: Synthesis complete.")
+        return ItineraryResponse(itinerary=final_itinerary)
 
-        print(f"Agent response: {final_output}")
-        return ItineraryResponse(itinerary=final_output)
-
-    except InvalidAgentOutputError as e:
-        # This catches the specific "data handoff" error
-        print(f"Agent execution error (data handoff): {e}")
-        raise HTTPException(status_code=500, detail="The agent failed during the final summarization step. Please try rephrasing your prompt.")
     except Exception as e:
-        # This catches any other unexpected errors
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while processing your request.")
