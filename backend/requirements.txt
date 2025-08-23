@@ -4,3 +4,4 @@ requests
 python-dotenv
 googlemaps
 google-api-python-client
+portia-sdk-python
