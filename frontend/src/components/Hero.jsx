@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown'; 
 
 const Hero = () => {
+
+  const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [itinerary, setItinerary] = useState('');
- 
-  const [error, setError] = useState('');
-
+  
   const handleSubmit = async (event) => {
-    event.preventDefault(); 
-    setItinerary('');
-    setError('');
+    event.preventDefault();
+    if (!prompt || isLoading) return;
 
-    if (!prompt) {
-      setError('Please enter a travel prompt.');
-      setIsLoading(false);
-      return;
-    }
+    
+    const newUserMessage = { sender: 'user', content: prompt };
+    setMessages(prevMessages => [...prevMessages, newUserMessage]);
+    setIsLoading(true);
+    setPrompt(''); 
 
     try {
       const response = await fetch('http://127.0.0.1:8000/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt }),
       });
 
@@ -32,28 +29,63 @@ const Hero = () => {
       }
 
       const data = await response.json();
-      setItinerary(data.itinerary);
+      
+      
+      const newAiMessage = { sender: 'ai', content: data.itinerary };
+      setMessages(prevMessages => [...prevMessages, newAiMessage]);
 
     } catch (err) {
       console.error("Failed to fetch itinerary:", err);
-      setError('Sorry, something went wrong. Please try again.');
+      const errorMessage = { sender: 'ai', content: 'Sorry, something went wrong. Please check the backend connection and try again.' };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <section className="container mx-auto px-6 py-16 text-center flex flex-col items-center justify-center min-h-[45vh]">
-        <h1 className="text-4xl md:text-6xl font-bold text-teal-heading">
-          Where are you headed?
-        </h1>
-        <p className="mt-4 text-lg md:text-xl text-subtext-gray max-w-2xl">
-          Your AI-powered trip planner for flights, hotels, and activities.
-        </p>
-        
-        {/* --- FORM & INPUT --- */}
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col sm:flex-row items-center gap-2 w-full max-w-2xl">
+    <section className="container mx-auto px-6 py-10 flex flex-col items-center">
+      {/* Conditionally render the initial hero text only if there are no messages */}
+      {messages.length === 0 && (
+        <div className="text-center">
+          <h1 className="text-4xl md:text-6xl font-bold text-teal-heading">
+            Where are you headed?
+          </h1>
+          <p className="mt-4 text-lg md:text-xl text-subtext-gray max-w-2xl">
+            Your AI-powered trip planner for flights, hotels, and activities.
+          </p>
+        </div>
+      )}
+
+      {/* --- CHAT DISPLAY AREA --- */}
+      <div className="w-full max-w-4xl mt-8 space-y-4">
+        {messages.map((message, index) => (
+          <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-xl p-4 rounded-xl ${message.sender === 'user' ? 'bg-soft-green text-white' : 'bg-white shadow border'}`}>
+              {/* Use ReactMarkdown for AI messages, and a simple div for user messages */}
+              {message.sender === 'ai' ? (
+                <ReactMarkdown className="prose max-w-none">
+                  {message.content}
+                </ReactMarkdown>
+              ) : (
+                <p>{message.content}</p>
+              )}
+            </div>
+          </div>
+        ))}
+        {/* Display loading indicator as an AI message bubble */}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-xl p-4 rounded-xl bg-white shadow border">
+              <p className="animate-pulse text-subtext-gray">Thinking...</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* --- INPUT FORM --- */}
+      <div className="mt-auto w-full max-w-4xl pt-8">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
             value={prompt}
@@ -64,40 +96,14 @@ const Hero = () => {
           />
           <button 
             type="submit" 
-            className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-soft-green rounded-full shadow-md hover:bg-green-600 transition-colors duration-300 flex items-center justify-center gap-2 whitespace-nowrap disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            className="px-6 py-3 font-semibold text-white bg-soft-green rounded-full shadow-md hover:bg-green-600 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={isLoading || !prompt}
           >
-            {isLoading ? 'Thinking...' : 'Explore'}
-            {!isLoading && <span aria-hidden="true">→</span>}
+            <span aria-hidden="true">→</span>
           </button>
         </form>
-      </section>
-
-      {/* --- RESULTS SECTION --- */}
-      <section className="container mx-auto px-6 pb-16 text-left">
-        {isLoading && (
-          <div className="text-center">
-            <p className="text-lg text-subtext-gray animate-pulse">Journey AI is planning your trip...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="max-w-4xl mx-auto p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {itinerary && (
-          <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg border border-gray-200">
-            {/* The 'whitespace-pre-wrap' class is key to preserving line breaks and spacing from the AI's response */}
-            <div 
-              className="prose max-w-none text-gray-700 whitespace-pre-wrap" 
-              dangerouslySetInnerHTML={{ __html: itinerary.replace(/\n/g, '<br />') }}
-            />
-          </div>
-        )}
-      </section>
-    </>
+      </div>
+    </section>
   );
 };
 
