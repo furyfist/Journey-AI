@@ -4,6 +4,7 @@ requests
 python-dotenv
 googlemaps
 google-api-python-client
-portia-sdk-
+portia-sdk-python
 pydantic
 fastapi[all]
+google-generativeai
