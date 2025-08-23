@@ -7,14 +7,14 @@ import Footer from './components/Footer';
 
 function App() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-cream-50 to-cream-100">
       <Header />
-      <main>
+      <main className="flex-grow pattern-grid">
         <Hero />
         <HowItWorks/>
         <Explore />
       </main>
-      <Footer />
+      <Footer className="mt-auto" />
     </div>
   )
 }

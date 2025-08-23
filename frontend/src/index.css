@@ -1,8 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 /* This file should be processed by Tailwind's PostCSS plugin for @tailwind directives to work */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-cream font-sans;
+@layer base {
+  body {
+    @apply bg-cream-50 font-sans text-sage-700;
+  }
+
+  h1 {
+    @apply text-4xl font-bold bg-gradient-to-r from-sage-600 via-teal-600 to-sage-500 text-transparent bg-clip-text md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold text-sage-700 md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold text-sage-600 md:text-3xl;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-2 rounded-full font-medium transition-all duration-300 transform hover:scale-105;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-teal-600 to-sage-600 text-cream-50 
+           hover:from-teal-700 hover:to-sage-700 shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-cream-200 text-sage-700 hover:bg-cream-300 shadow-md;
+  }
+
+  .card {
+    @apply bg-cream-50/90 backdrop-blur-sm border border-cream-200 
+           rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+.pattern-grid {
+  background-image: 
+    linear-gradient(to right, rgba(124, 154, 143, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(124, 154, 143, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Add subtle animations for chat messages */
+.prose {
+  position: relative;
+}
+
+.prose::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.1) 15%,
+    rgba(255, 255, 255, 0.1) 85%,
+    transparent
+  );
+  opacity: 0;
+  animation: shine 3s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }

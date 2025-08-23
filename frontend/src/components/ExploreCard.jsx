@@ -1,17 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const ExploreCard = ({ city, dateRange, imageUrl }) => {
+  const [imageError, setImageError] = useState(false);
+
+  // Updated fallback image with a real photography
+  const fallbackImageUrl = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&auto=format&fit=crop";
+
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden group cursor-pointer transform hover:-translate-y-1 transition-transform duration-300">
+    <div className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
       <img
-        src={imageUrl}
-        alt={`A scenic view of ${city}`}
-        className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
-        loading="lazy"
+        src={imageError ? fallbackImageUrl : imageUrl}
+        alt={`${city} destination`}
+        onError={() => setImageError(true)}
+        className="w-full h-64 object-cover transform group-hover:scale-110 transition-transform duration-300"
       />
-      <div className="p-4">
-        <h3 className="font-bold text-gray-700">{city}</h3>
-        <p className="text-sm text-subtext-gray">{dateRange}</p>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+        <div className="absolute bottom-4 left-4">
+          <h3 className="text-2xl font-bold text-white tracking-wide">{city}</h3>
+          <p className="text-sm text-white/90 mt-1">{dateRange}</p>
+        </div>
       </div>
     </div>
   );
