@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv
-API_KEY = os.getenv("GOOGLE_MAPS_API_KEY") # not able to get this api key
+API_KEY = os.getenv("GOOGLE_MAPS_API_KEY") 
 
 def find_places_of_interest(destination: str, interest: str) -> str:
     """
