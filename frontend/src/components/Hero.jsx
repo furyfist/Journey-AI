@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown'; 
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 
 const Hero = () => {
-
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -11,11 +11,10 @@ const Hero = () => {
     event.preventDefault();
     if (!prompt || isLoading) return;
 
-    
     const newUserMessage = { sender: 'user', content: prompt };
     setMessages(prevMessages => [...prevMessages, newUserMessage]);
     setIsLoading(true);
-    setPrompt(''); 
+    setPrompt('');
 
     try {
       const response = await fetch('http://127.0.0.1:8000/chat', {
@@ -29,8 +28,6 @@ const Hero = () => {
       }
 
       const data = await response.json();
-      
-      
       const newAiMessage = { sender: 'ai', content: data.itinerary };
       setMessages(prevMessages => [...prevMessages, newAiMessage]);
 
@@ -45,7 +42,6 @@ const Hero = () => {
 
   return (
     <section className="container mx-auto px-6 py-10 flex flex-col items-center">
-      {/* Conditionally render the initial hero text only if there are no messages */}
       {messages.length === 0 && (
         <div className="text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-teal-heading">
@@ -62,9 +58,9 @@ const Hero = () => {
         {messages.map((message, index) => (
           <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-xl p-4 rounded-xl ${message.sender === 'user' ? 'bg-soft-green text-white' : 'bg-white shadow border'}`}>
-              {/* Use ReactMarkdown for AI messages, and a simple div for user messages */}
               {message.sender === 'ai' ? (
-                <ReactMarkdown className="prose max-w-none">
+              
+                <ReactMarkdown className="prose max-w-none" rehypePlugins={[rehypeSanitize]}>
                   {message.content}
                 </ReactMarkdown>
               ) : (
@@ -73,7 +69,6 @@ const Hero = () => {
             </div>
           </div>
         ))}
-        {/* Display loading indicator as an AI message bubble */}
         {isLoading && (
           <div className="flex justify-start">
             <div className="max-w-xl p-4 rounded-xl bg-white shadow border">
@@ -86,7 +81,8 @@ const Hero = () => {
       {/* --- INPUT FORM --- */}
       <div className="mt-auto w-full max-w-4xl pt-8">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <input
+          {/* ... (rest of the form code is unchanged) ... */}
+           <input
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
