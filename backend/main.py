@@ -1,58 +1,84 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+# backend/main.py
 
-from tools.weather import get_weather
-from tools.places import find_places_of_interest 
-from tools.youtube import find_youtube_video
-#initialize 
-app = FastAPI(
-    title="Journey AI Tools",
-    description="API endpoints for the tools used by the Journey AI agent.",
-    version="1.0.0"
+import os
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from portia import Config, Portia, LLMProvider, InvalidAgentOutputError
+
+# --- Load Environment Variables ---
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=dotenv_path)
+
+# --- Pydantic Models ---
+class PromptRequest(BaseModel):
+    prompt: str
+
+class ItineraryResponse(BaseModel):
+    itinerary: str
+
+# --- FastAPI App Initialization ---
+app = FastAPI()
+
+# --- CORS Middleware ---
+origins = ["http://localhost", "http://localhost:5173"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# --- Portia Agent Configuration ---
+portia_agent = None
+try:
+    if not os.getenv("GOOGLE_API_KEY") or not os.getenv("PORTIA_API_KEY"):
+        raise ValueError("API keys not found in .env file")
 
-class WeatherRequest(BaseModel):
-    destination: str
+    SYSTEM_PROMPT = """
+    You are Journey AI, a helpful travel research assistant. 
+    Your primary job is to use your search tool to find information related to the user's prompt and then synthesize that information into a coherent final answer.
+    """
+    
+    config = Config.from_default(
+        llm_provider=LLMProvider.GOOGLE,
+        default_model="google/gemini-1.5-flash",
+        system_prompt=SYSTEM_PROMPT,
+        portia_api_key=os.getenv("PORTIA_API_KEY")
+    )
+    portia_agent = Portia(config=config)
+    print("✅ Portia Agent initialized successfully.")
+except Exception as e:
+    print(f"❌ Error initializing Portia Agent: {e}")
 
-class PlacesRequest(BaseModel):
-    destination: str
-    interest: str
+# --- API Endpoint ---
+@app.post("/chat", response_model=ItineraryResponse)
+async def chat_with_agent(request: PromptRequest):
+    if not portia_agent:
+        raise HTTPException(status_code=500, detail="Agent not initialized. Check backend server logs.")
 
-
-@app.post("/tools/get_weather")
-def weather_endpoint(request: WeatherRequest):
-    """API endpoint to get the weather for a destination."""
+    print(f"Received prompt: {request.prompt}")
+    
     try:
-        weather_data = get_weather(destination=request.destination)
-        return {"result": weather_data}
+        # We run the agent with the user's prompt
+        response_object = portia_agent.run(request.prompt)
+        final_output = response_object.outputs.final_output
+
+        # The response from Portia can sometimes be an object, not a string.
+        # We'll safely convert it to a string to avoid errors.
+        if not isinstance(final_output, str):
+            final_output = str(final_output)
+
+        print(f"Agent response: {final_output}")
+        return ItineraryResponse(itinerary=final_output)
+
+    except InvalidAgentOutputError as e:
+        # This catches the specific "data handoff" error
+        print(f"Agent execution error (data handoff): {e}")
+        raise HTTPException(status_code=500, detail="The agent failed during the final summarization step. Please try rephrasing your prompt.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/tools/find_places") 
-def places_endpoint(request: PlacesRequest):
-    """API endpoint to find places of interest."""
-    try:
-        places_data = find_places_of_interest(
-            destination=request.destination,
-                        interest=request.interest
-        )
-        return {"result": places_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/tools/find_youtube_video") 
-def youtube_endpoint(request: WeatherRequest):
-    """API endpoint to find a YouTube video for a destination."""
-    try:
-        video_data = find_youtube_video(destination=request.destination)
-        return {"result": video_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/")
-def read_root():
-    """Check server status."""
-    return {"status": "Journey AI backend is running!"}
+        # This catches any other unexpected errors
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while processing your request.")

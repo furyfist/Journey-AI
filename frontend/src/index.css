@@ -1,0 +1,8 @@
+/* This file should be processed by Tailwind's PostCSS plugin for @tailwind directives to work */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-cream font-sans;
+}
