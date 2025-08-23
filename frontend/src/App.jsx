@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
-import RecentSearches from './components/RecentSearches';
+import HowItWorks from './components/howitworks';
 import Explore from './components/Explore';
 import Footer from './components/Footer';
 
@@ -11,7 +11,7 @@ function App() {
       <Header />
       <main>
         <Hero />
-        <RecentSearches />
+        <HowItWorks/>
         <Explore />
       </main>
       <Footer />

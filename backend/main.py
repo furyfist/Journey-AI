@@ -1,5 +1,3 @@
-# backend/main.py
-
 import os
 import json
 from fastapi import FastAPI, HTTPException
