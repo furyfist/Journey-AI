@@ -8,3 +8,5 @@ portia-sdk-python
 pydantic
 fastapi[all]
 google-generativeai
+markdown-it-py
+WeasyPrint

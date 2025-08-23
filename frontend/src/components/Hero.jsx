@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
+// --- Import the new, more robust libraries ---
+import MarkdownIt from 'markdown-it';
+import DOMPurify from 'isomorphic-dompurify';
+
+// --- Initialize the Markdown converter ---
+const md = new MarkdownIt();
 
 const Hero = () => {
   const [messages, setMessages] = useState([]);
@@ -28,7 +32,14 @@ const Hero = () => {
       }
 
       const data = await response.json();
-      const newAiMessage = { sender: 'ai', content: data.itinerary };
+
+      // --- NEW 2-STEP RENDERING PIPELINE ---
+      // 1. Convert the AI's Markdown response to an HTML string
+      const rawHtml = md.render(data.itinerary);
+      // 2. Sanitize that HTML string to ensure it's safe to render
+      const cleanHtml = DOMPurify.sanitize(rawHtml);
+
+      const newAiMessage = { sender: 'ai', content: cleanHtml };
       setMessages(prevMessages => [...prevMessages, newAiMessage]);
 
     } catch (err) {
@@ -44,12 +55,8 @@ const Hero = () => {
     <section className="container mx-auto px-6 py-10 flex flex-col items-center">
       {messages.length === 0 && (
         <div className="text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-teal-heading">
-            Where are you headed?
-          </h1>
-          <p className="mt-4 text-lg md:text-xl text-subtext-gray max-w-2xl">
-            Your AI-powered trip planner for flights, hotels, and activities.
-          </p>
+          <h1 className="text-4xl md:text-6xl font-bold text-teal-heading">Where are you headed?</h1>
+          <p className="mt-4 text-lg md:text-xl text-subtext-gray max-w-2xl">Your AI-powered trip planner for flights, hotels, and activities.</p>
         </div>
       )}
 
@@ -59,10 +66,12 @@ const Hero = () => {
           <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-xl p-4 rounded-xl ${message.sender === 'user' ? 'bg-soft-green text-white' : 'bg-white shadow border'}`}>
               {message.sender === 'ai' ? (
-              
-                <ReactMarkdown className="prose max-w-none" rehypePlugins={[rehypeSanitize]}>
-                  {message.content}
-                </ReactMarkdown>
+                // --- THE FIX IS HERE ---
+                // We now render the pre-sanitized HTML using dangerouslySetInnerHTML
+                <div 
+                  className="prose max-w-none" 
+                  dangerouslySetInnerHTML={{ __html: message.content }} 
+                />
               ) : (
                 <p>{message.content}</p>
               )}
@@ -71,17 +80,16 @@ const Hero = () => {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-xl p-4 rounded-xl bg-white shadow border">
-              <p className="animate-pulse text-subtext-gray">Thinking...</p>
-            </div>
+             <div className="max-w-xl p-4 rounded-xl bg-white shadow border">
+               <p className="animate-pulse text-subtext-gray">Thinking...</p>
+             </div>
           </div>
         )}
       </div>
 
-      {/* --- INPUT FORM --- */}
+      {/* --- INPUT FORM (Unchanged) --- */}
       <div className="mt-auto w-full max-w-4xl pt-8">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          {/* ... (rest of the form code is unchanged) ... */}
            <input
             type="text"
             value={prompt}
