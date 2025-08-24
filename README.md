@@ -123,7 +123,7 @@ You should now have a fully functional version of Journey AI running locally\!
 
 #### Workflow 1: Getting a User's Travel Wishes
 
-![Diagram for Workflow 1](Images/Workflow%201.png)
+![Diagram for Workflow 1](Images/workflow%201.png)
 
 
 This is the very first step in the Journey AI experience. The goal here is to collect all the important information from the user about their dream trip. I need to understand exactly what they are looking for so I can give this information to my AI brain.
@@ -162,7 +162,7 @@ def handle_itinerary_request():
 
 #### Workflow 2: The AI Magic - Creating the Plan
 
-![Diagram for Workflow 2](Images/Workflow%202.png)
+![Diagram for Workflow 2](Images/workflow%202.png)
 
 
 This is the heart of Journey AI. In this workflow, I take the user's wishes and give them to my powerful AI model. The AI's job is to think like an expert travel agent and write a fantastic, detailed itinerary from scratch.
@@ -198,7 +198,7 @@ def create_ai_prompt(user_data):
 
 #### Workflow 3: Saving and Showing the Beautiful Plan
 
-![Diagram for Workflow 3](Images/Workflow%203.png)
+![Diagram for Workflow 3](Images/workflow%203.png)
 
 Once the AI has created the itinerary, I need to save it so the user can see it later, and I need to present it on the website in a beautiful and easy-to-read way.
 
