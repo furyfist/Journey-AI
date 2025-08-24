@@ -1,5 +1,8 @@
+# backend/main.py
+
 import os
 import json
+import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,7 +10,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from portia import Config, Portia, LLMProvider
 
-# --- Load Environment Variables & Configure Google AI ---
+# --- Load Environment Variables & Configure APIs ---
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=dotenv_path)
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -19,7 +22,7 @@ class PromptRequest(BaseModel):
 class ItineraryResponse(BaseModel):
     itinerary: str
 
-# --- FastAPI App Initialization ---
+# --- FastAPI App Initialization & CORS ---
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -30,23 +33,13 @@ app.add_middleware(
 )
 
 # --- Portia Agent Configuration ---
-RESEARCHER_PROMPT = "You are a research assistant. Your ONLY job is to use your search tool to find information on this single, specific query: "
-SYNTHESIZER_PROMPT = """
-You are an expert travel itinerary planner. You will be given a block of pre-researched text.
-Your ONLY job is to synthesize and organize this information into a clear, helpful, and beautifully formatted travel itinerary.
-Use markdown for formatting. If the research is insufficient, state what's missing.
-"""
-
 portia_agent = None
 try:
     if not os.getenv("GOOGLE_API_KEY") or not os.getenv("PORTIA_API_KEY"):
         raise ValueError("API keys not found in .env file")
-    
-    # We only need one Portia agent instance for research
     config = Config.from_default(
         llm_provider=LLMProvider.GOOGLE,
         default_model="google/gemini-1.5-flash",
-        system_prompt=RESEARCHER_PROMPT,
         portia_api_key=os.getenv("PORTIA_API_KEY")
     )
     portia_agent = Portia(config=config)
@@ -54,37 +47,17 @@ try:
 except Exception as e:
     print(f"❌ Error initializing Portia Agent: {e}")
 
-# --- NEW HELPER FUNCTION FOR THE PLANNER ---
+# --- Helper Functions ---
 async def get_research_plan(user_prompt: str) -> list[str]:
     """Uses Gemini to break a complex prompt into simple search queries."""
-    planner_model = genai.GenerativeModel('gemini-1.5-pro-latest')
-    
-    prompt = f"""
-    Based on the following user request, create a concise list of 3 to 5 simple, single-topic search queries that will gather the necessary information to build a travel plan.
-    Return ONLY a valid JSON list of strings. Do not include any other text or markdown.
-
-    Example:
-    User Request: "Plan a 3-day budget trip to Rome with a focus on ancient history and pasta."
-    Your Response:
-    [
-        "3 day budget itinerary for Rome",
-        "opening times and ticket prices for the Colosseum and Roman Forum",
-        "highly-rated budget pasta restaurants in Rome",
-        "safety tips for tourists in Rome"
-    ]
-
-    User Request: "{user_prompt}"
-    Your Response:
-    """
-    
+    # --- CHANGE 1: Switched back to gemini-1.5-flash ---
+    planner_model = genai.GenerativeModel('gemini-1.5-flash')
+    prompt = f'Based on the user request "{user_prompt}", create a JSON list of 3-5 simple, single-topic search queries to gather information for a travel plan. Return only the JSON list.'
     try:
         response = await planner_model.generate_content_async(prompt)
-        # Clean up the response to ensure it's valid JSON
         json_response = response.text.strip().replace("```json", "").replace("```", "")
         plan = json.loads(json_response)
-        if isinstance(plan, list):
-            return plan
-        return []
+        return plan if isinstance(plan, list) else []
     except Exception as e:
         print(f"Error creating research plan: {e}")
         return []
@@ -106,16 +79,30 @@ async def chat_with_agent(request: PromptRequest):
         # --- STAGE 2: THE RESEARCHER ---
         print("Stage 2: Starting research...")
         collected_research = ""
+        max_retries = 2
         for task in research_tasks:
             print(f"  - Researching: {task}")
-            research_result = await portia_agent.arun(task) # Using async version
-            collected_research += f"Research on '{task}':\n{str(research_result.outputs.final_output)}\n\n"
+            for attempt in range(max_retries):
+                try:
+                    research_result = await portia_agent.arun(task)
+                    collected_research += f"## Research on '{task}':\n{str(research_result.outputs.final_output)}\n\n"
+                    break 
+                except Exception as e:
+                    print(f"  - Attempt {attempt + 1} failed for task '{task}': {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(1)
+                    else:
+                        collected_research += f"## Research on '{task}':\nFailed to retrieve information.\n\n"
         print("Stage 2: Research complete.")
 
         # --- STAGE 3: THE SYNTHESIZER ---
         print("Stage 3: Starting synthesis...")
-        synthesizer_model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        synthesis_prompt = f"{SYNTHESIZER_PROMPT}\n\n--- RAW DATA ---\n{collected_research}\n--- END RAW DATA ---"
+        # --- CHANGE 2: Switched back to gemini-1.5-flash ---
+        synthesizer_model = genai.GenerativeModel('gemini-1.5-flash')
+        synthesis_prompt = (
+            "You are an expert travel itinerary planner... Synthesize this information into a clear, helpful, and beautifully formatted travel itinerary using markdown.\n\n"
+            f"--- RAW RESEARCH DATA ---\n{collected_research}\n--- END RAW RESEARCH DATA ---"
+        )
         synthesis_result = await synthesizer_model.generate_content_async(synthesis_prompt)
         final_itinerary = synthesis_result.text
         
@@ -124,4 +111,4 @@ async def chat_with_agent(request: PromptRequest):
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while processing your request.")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
