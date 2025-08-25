@@ -6,7 +6,7 @@ import asyncio
 import io
 import uuid
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ except Exception as e:
 # --- HELPER FUNCTIONS ---
 
 async def get_research_plan(user_prompt: str) -> list[str]:
-    planner_model = genai.GenerativeModel('gemini-pro')
+    planner_model = genai.GenerativeModel('gemini-1.5-flash')
     prompt = f'Based on the user request "{user_prompt}", create a JSON list of 3-5 simple, single-topic search queries to gather information for a travel plan. Return only the JSON list.'
     try:
         response = await planner_model.generate_content_async(prompt)
@@ -96,27 +96,48 @@ def create_pdf_from_itinerary(markdown_text: str) -> bytes:
 
 @app.post("/chat", response_model=ItineraryResponse)
 async def chat_with_agent(request: PromptRequest):
-    if not portia_agent: raise HTTPException(status_code=500, detail="Agent is not initialized.")
+    if not portia_agent: raise HTTPException(status_code=500, detail="Agent not initialized.")
     try:
-        print(f"Stage 1: Planning for prompt: '{request.prompt}'")
+        # STAGE 1: PLANNER
+        print(f"Stage 1: Planning research for prompt: '{request.prompt}'")
         research_tasks = await get_research_plan(request.prompt)
-        if not research_tasks: raise HTTPException(status_code=500, detail="Failed to create plan.")
+        if not research_tasks: raise HTTPException(status_code=500, detail="Failed to create research plan.")
         print(f"Plan created: {research_tasks}")
         
-        print("Stage 2: Researching...")
+        # STAGE 2: RESEARCHER (with Retry Logic)
+        print("Stage 2: Starting research...")
         collected_research = ""
+        max_retries = 2
         for task in research_tasks:
-            research_result = await portia_agent.arun(task)
-            collected_research += f"## Research on '{task}':\n{str(research_result.outputs.final_output)}\n\n"
+            print(f"  - Researching: {task}")
+            for attempt in range(max_retries):
+                try:
+                    research_result = await portia_agent.arun(task)
+                    collected_research += f"## Research on '{task}':\n{str(research_result.outputs.final_output)}\n\n"
+                    break 
+                except Exception as e:
+                    print(f"  - Attempt {attempt + 1} failed for task '{task}': {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(1)
+                    else:
+                        collected_research += f"## Research on '{task}':\nFailed to retrieve information.\n\n"
         print("Stage 2: Research complete.")
         
-        print("Stage 3: Synthesizing...")
-        synthesizer_model = genai.GenerativeModel('gemini-pro')
-        synthesis_prompt = f"Synthesize this pre-researched text into a complete and well-formatted travel itinerary using Markdown:\n\n{collected_research}"
+        # STAGE 3: SYNTHESIZER
+        print("Stage 3: Starting synthesis...")
+        synthesizer_model = genai.GenerativeModel('gemini-1.5-flash')
+        synthesis_prompt = (
+            "You are an expert travel itinerary planner. You will be given pre-researched text, separated by headings. "
+            "Synthesize this into a clear, helpful, and beautifully formatted travel itinerary using markdown. "
+            "If some research failed, acknowledge it and create the best plan possible with the available information.\n\n"
+            f"--- RAW RESEARCH DATA ---\n{collected_research}\n--- END RAW RESEARCH DATA ---"
+        )
         synthesis_result = await synthesizer_model.generate_content_async(synthesis_prompt)
         final_itinerary = synthesis_result.text
+        print("Stage 3: Synthesis complete.")
         return ItineraryResponse(itinerary=final_itinerary)
     except Exception as e:
+        print(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 @app.post("/download-pdf")
@@ -129,17 +150,15 @@ async def download_pdf(request: PdfRequest):
 
 @app.post("/send-email")
 async def send_email(request: EmailRequest):
-    if not emailer_agent:
-        raise HTTPException(status_code=500, detail="Emailer Agent is not initialized.")
+    if not emailer_agent: raise HTTPException(status_code=500, detail="Emailer Agent not initialized.")
     ngrok_url = os.getenv("NGROK_URL")
-    if not ngrok_url:
-        raise HTTPException(status_code=500, detail="NGROK_URL not configured in .env file.")
+    if not ngrok_url: raise HTTPException(status_code=500, detail="NGROK_URL not configured in .env file.")
 
     temp_filename = f"{uuid.uuid4()}.pdf"
     temp_filepath = os.path.join(TEMP_DIR, temp_filename)
     
     try:
-        print(f"Received request to email itinerary to: {request.email}")
+        print(f"Generating temporary PDF for email: {temp_filename}")
         pdf_bytes = create_pdf_from_itinerary(request.markdown_text)
         with open(temp_filepath, "wb") as f:
             f.write(pdf_bytes)
@@ -148,9 +167,9 @@ async def send_email(request: EmailRequest):
         print(f"PDF available at public URL: {public_pdf_url}")
         
         email_prompt = (
-            f"Your task is to send an email with a PDF attachment. You must follow this two-step process exactly:\n"
-            f"Step 1: Use the 'Google Draft Email Tool' to create a new draft email for '{request.email}'. The subject should be 'Your Journey AI Travel Itinerary'. The body should be 'Here is your personalized travel plan. Enjoy your trip!'. Attach the file from this URL: {public_pdf_url}.\n"
-            f"Step 2: Take the draft ID from the output of the first step and use the 'Google Send Draft Email Tool' to send the email."
+            f"Your task is to send an email. Follow this two-step process exactly:\n"
+            f"Step 1: Use the 'Google Draft Email Tool' to create a draft for '{request.email}'. Subject: 'Your Journey AI Travel Itinerary'. Body: 'Here is your personalized travel plan. Enjoy your trip!'. Attach the file from this URL: {public_pdf_url}.\n"
+            f"Step 2: Take the draft ID from step 1 and use the 'Google Send Draft Email Tool' to send the email."
         )
 
         print("Calling Emailer Agent with two-step prompt...")
