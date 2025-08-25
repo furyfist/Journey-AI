@@ -1,6 +1,6 @@
 # Journey AI
 
-It is late on a Friday and you are all set for the weekend. Then your school friends call and say they want to go on a two-day trip starting tomorrow. What do you do? Spend three or four hours hunting for hotels, reading scattered reviews, and building a schedule by hand? 
+It is late on a Friday and you are all set for the weekend. Then your school friends call and say they want to go on a two-day trip starting tomorrow. What do you do? Spend three or four hours hunting for hotels, reading scattered reviews, and building a schedule by hand?
 
 Here’s the thing: nobody has time for that.
 
@@ -12,20 +12,24 @@ Meet Journey AI. It is a travel planner that turns a few quick inputs into a rea
 
 ### See My Project Live\!
 
-  * **Try the Live Website:** https://github.com/furyfist/Journy-AI
-  * **Watch a Video Demo:** [Demo](https://drive.google.com/drive/folders/1A57qJ1R8wlIyY5BhsNZsVMN_5OsQB9II?usp=sharing)
-  * **Read My Planning Documents:** [Document](https://drive.google.com/drive/folders/1A57qJ1R8wlIyY5BhsNZsVMN_5OsQB9II?usp=sharing)
+- **Code:** https://github.com/furyfist/Journy-AI
+- **Watch a Video Demo:** [Demo](https://drive.google.com/drive/folders/1A57qJ1R8wlIyY5BhsNZsVMN_5OsQB9II?usp=sharing)
+- **Read My Planning Documents:** [Document](https://drive.google.com/drive/folders/1A57qJ1R8wlIyY5BhsNZsVMN_5OsQB9II?usp=sharing)
+
+### Frontend Design
+
+![fronted - header](Images/frontend-header.png)
+![fronted - middle section](Images\frontend-middle-section.png)
+![fronted - explore section](Images/frontend-explore-section.png)
 
 ### My Technology Stack (The tools I used to build Journey AI)
 
-  * **Frontend (The part you see):** I used React to build the interactive and user-friendly website that you click on and use.
-  * **Backend (The brain of the operation):** I used Python with FastAPI to build the server that works behind the scenes, takes your requests, and talks to the AI.
-  * **Artificial Intelligence (The magic):** I used the Google Gemini Pro API and the Portia AI SDK to understand your travel wishes and generate the smart, human-like itinerary.
-  * **Database (Where we store information):** I used PostgreSQL to safely store user accounts and all the travel plans that have been created.
-  * **Deployment (How I put it on the internet):** I used Docker to package my application so it can run anywhere, and I hosted it on AWS (Amazon Web Services).
-  * **Styling (Making it look good):** I used Tailwind CSS to design the website and make sure it looks great on both computers and phones.
-
-
+- **Frontend (The part you see):** I used React to build the interactive and user-friendly website that you click on and use.
+- **Backend (The brain of the operation):** I used Python with FastAPI to build the server that works behind the scenes, takes your requests, and talks to the AI.
+- **Artificial Intelligence (The magic):** I used the Google Gemini Pro API and the Portia AI SDK to understand your travel wishes and generate the smart, human-like itinerary.
+- **Database (Where we store information):** I used PostgreSQL to safely store user accounts and all the travel plans that have been created.
+- **Deployment (How I put it on the internet):** I used Docker to package my application so it can run anywhere, and I hosted it on AWS (Amazon Web Services).
+- **Styling (Making it look good):** I used Tailwind CSS to design the website and make sure it looks great on both computers and phones.
 
 ### Getting Started: Setting Up the Project Locally
 
@@ -35,10 +39,10 @@ Follow these instructions to get a copy of Journey AI running on your local mach
 
 Before you begin, ensure you have the following software installed on your system:
 
-  * **Git:** To clone the repository.
-  * **Python:** Version 3.10 or newer.
-  * **Node.js:** Version 22.x or newer. I recommend using [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm) to manage your Node.js versions.
-  * **(Optional) Docker & Docker Compose:** To run the application in containers.
+- **Git:** To clone the repository.
+- **Python:** Version 3.10 or newer.
+- **Node.js:** Version 22.x or newer. I recommend using [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm) to manage your Node.js versions.
+- **(Optional) Docker & Docker Compose:** To run the application in containers.
 
 #### Installation & Setup
 
@@ -53,78 +57,78 @@ Before you begin, ensure you have the following software installed on your syste
 2.  **Backend Setup (Python)**
     This will set up the FastAPI server and the AI agent.
 
-      * **Navigate to the backend directory:**
-        ```bash
-        cd backend
-        ```
-      * **Create and activate a Python virtual environment:**
-        ```bash
-        # Create the environment
-        python -m venv venv
+    - **Navigate to the backend directory:**
+      ```bash
+      cd backend
+      ```
+    - **Create and activate a Python virtual environment:**
 
-        # Activate it (Windows PowerShell)
-        .\venv\Scripts\Activate.ps1
-        ```
-      * **Install the required Python packages:**
-        ```bash
-        pip install -r requirements.txt
-        ```
-      * **Create your Environment File:** You'll need to create a file to store your secret API keys. Copy the example file:
-        ```bash
-        # For Windows
-        copy .env.example .env
-        ```
-      * **Add Your API Keys:** Open the new **`.env`** file and add your secret keys from Google and Portia AI.
-        ```env
-        # backend/.env
-        GOOGLE_API_KEY="your-google-gemini-key-here"
-        PORTIA_API_KEY="your-portia-labs-key-here"
-        ```
+      ```bash
+      # Create the environment
+      python -m venv venv
+
+      # Activate it (Windows PowerShell)
+      .\venv\Scripts\Activate.ps1
+      ```
+
+    - **Install the required Python packages:**
+      ```bash
+      pip install -r requirements.txt
+      ```
+    - **Create your Environment File:** You'll need to create a file to store your secret API keys. Copy the example file:
+      ```bash
+      # For Windows
+      copy .env.example .env
+      ```
+    - **Add Your API Keys:** Open the new **`.env`** file and add your secret keys from Google and Portia AI.
+      ```env
+      # backend/.env
+      GOOGLE_API_KEY="your-google-gemini-key-here"
+      PORTIA_API_KEY="your-portia-labs-key-here"
+      ```
 
 3.  **Frontend Setup (React)**
     This will set up the user interface.
 
-      * **Navigate to the frontend directory** (from the project root):
-        ```bash
-        cd frontend
-        ```
-      * **Install the required JavaScript packages:**
-        ```bash
-        npm install
-        ```
+    - **Navigate to the frontend directory** (from the project root):
+      ```bash
+      cd frontend
+      ```
+    - **Install the required JavaScript packages:**
+      ```bash
+      npm install
+      ```
 
 #### Running the Application
 
 To run the full application, you will need to have two terminals open simultaneously.
 
-  * **Terminal 1: Start the Backend Server**
-    Navigate to the project's **root directory** (`Journey AI/`) and run:
+- **Terminal 1: Start the Backend Server**
+  Navigate to the project's **root directory** (`Journey AI/`) and run:
 
-    ```bash
-    # Make sure your Python venv is activated first!
-    uvicorn backend.main:app --reload
-    ```
+  ```bash
+  # Make sure your Python venv is activated first!
+  uvicorn backend.main:app --reload
+  ```
 
-    The backend should now be running on `http://127.0.0.1:8000`.
+  The backend should now be running on `http://127.0.0.1:8000`.
 
-  * **Terminal 2: Start the Frontend Application**
-    In a new terminal, navigate to the **frontend directory** (`Journey AI/frontend/`) and run:
+- **Terminal 2: Start the Frontend Application**
+  In a new terminal, navigate to the **frontend directory** (`Journey AI/frontend/`) and run:
 
-    ```bash
-    npm run dev
-    ```
+  ```bash
+  npm run dev
+  ```
 
-    The React application will start, and your browser should automatically open to `http://localhost:5173`.
+  The React application will start, and your browser should automatically open to `http://localhost:5173`.
 
 You should now have a fully functional version of Journey AI running locally\!
-
 
 ### How It Works, Step-by-Step
 
 #### Workflow 1: Getting a User's Travel Wishes
 
 ![Diagram for Workflow 1](Images/workflow%201.png)
-
 
 This is the very first step in the Journey AI experience. The goal here is to collect all the important information from the user about their dream trip. I need to understand exactly what they are looking for so I can give this information to my AI brain.
 
@@ -141,29 +145,28 @@ This is the very first step in the Journey AI experience. The goal here is to co
 def handle_itinerary_request():
     # Step 1: Get the user's travel wishes from the website.
     travel_data = request.json
-    
+
     # Step 2: Check if all the information is good.
     print(f"Received request for: {travel_data['destination']}")
-    
+
     # Step 3: Send this data to the AI to create the plan.
     itinerary = create_plan_with_ai(travel_data)
-    
+
     # Step 4: Return the finished plan back to the website.
     return jsonify(itinerary)
 ```
 
 **What this code does, explained simply:**
 
-  * This code defines a special internet address (`/api/generate-itinerary`) on my server.
-  * When the website sends information to this address, this function starts running.
-  * It takes the user's travel information (like "Paris") that was sent from the website.
-  * It then calls another function to do the AI magic.
-  * Finally, it sends the complete travel plan back to the website so the user can see it.
+- This code defines a special internet address (`/api/generate-itinerary`) on my server.
+- When the website sends information to this address, this function starts running.
+- It takes the user's travel information (like "Paris") that was sent from the website.
+- It then calls another function to do the AI magic.
+- Finally, it sends the complete travel plan back to the website so the user can see it.
 
 #### Workflow 2: The AI Magic - Creating the Plan
 
 ![Diagram for Workflow 2](Images/workflow%202.png)
-
 
 This is the heart of Journey AI. In this workflow, I take the user's wishes and give them to my powerful AI model. The AI's job is to think like an expert travel agent and write a fantastic, detailed itinerary from scratch.
 
@@ -179,7 +182,7 @@ This is the heart of Journey AI. In this workflow, I take the user's wishes and 
 ```python
 def create_ai_prompt(user_data):
     prompt = f"""
-    You are a friendly and expert travel agent. 
+    You are a friendly and expert travel agent.
     Your task is to create a travel plan for a trip to {user_data['destination']}.
     The traveler is interested in {user_data['interests']}.
     Please create a day-by-day plan. For each day, list at least 3 activities.
@@ -191,10 +194,10 @@ def create_ai_prompt(user_data):
 
 **What this code does, explained simply:**
 
-  * This code creates the message I send to the AI.
-  * It's like writing a letter. I am telling the AI its job ("You are a friendly and expert travel agent").
-  * I use the user's information (like `{user_data['destination']}`) to fill in the blanks, making the instructions personal.
-  * I give the AI very specific rules on how to give me the plan back ("Format your entire response as a JSON object"). This ensures I get the information in a way my application can understand.
+- This code creates the message I send to the AI.
+- It's like writing a letter. I am telling the AI its job ("You are a friendly and expert travel agent").
+- I use the user's information (like `{user_data['destination']}`) to fill in the blanks, making the instructions personal.
+- I give the AI very specific rules on how to give me the plan back ("Format your entire response as a JSON object"). This ensures I get the information in a way my application can understand.
 
 #### Workflow 3: Saving and Showing the Beautiful Plan
 
@@ -222,22 +225,21 @@ CREATE TABLE itineraries (
 
 **What this code does, explained simply:**
 
-  * This is not Python; it's SQL, the language for databases.
-  * `CREATE TABLE itineraries` is like creating a new spreadsheet to hold all the travel plans.
-  * I define the columns for my spreadsheet: `id` (a unique number for each plan), `user_email` (to know who the plan belongs to), `destination_name`, `full_itinerary_data` (where I store the entire plan from the AI), and `created_date`.
-
+- This is not Python; it's SQL, the language for databases.
+- `CREATE TABLE itineraries` is like creating a new spreadsheet to hold all the travel plans.
+- I define the columns for my spreadsheet: `id` (a unique number for each plan), `user_email` (to know who the plan belongs to), `destination_name`, `full_itinerary_data` (where I store the entire plan from the AI), and `created_date`.
 
 #### The Big Problems with Travel Planning
 
-  * **It’s Too Much Work:** People spend many hours, sometimes even days, looking at different websites, blogs, and maps. There is too much information, and it's hard to know what's best.
-  * **Plans Are Not Personal:** Most travel advice you find online is generic. It's not made for you. It doesn't know your specific budget, who you are traveling with, or that you love museums but dislike hiking.
-  * **Scheduling is a Headache:** Trying to figure out what to do each day is very difficult. You have to worry about opening times for attractions, how long it takes to travel between places, and fitting everything into your day without being rushed.
+- **It’s Too Much Work:** People spend many hours, sometimes even days, looking at different websites, blogs, and maps. There is too much information, and it's hard to know what's best.
+- **Plans Are Not Personal:** Most travel advice you find online is generic. It's not made for you. It doesn't know your specific budget, who you are traveling with, or that you love museums but dislike hiking.
+- **Scheduling is a Headache:** Trying to figure out what to do each day is very difficult. You have to worry about opening times for attractions, how long it takes to travel between places, and fitting everything into your day without being rushed.
 
 #### How Journey AI is the Perfect Solution
 
-  * **Instant, Intelligent Planning:** Instead of you doing the work, my AI does it in seconds. It acts like a super-smart travel agent that instantly builds a complete plan for you.
-  * **A Plan That's 100% About You:** Journey AI listens to you. You tell it what you love, and it builds a trip around your personal interests, ensuring you have a vacation that you will truly enjoy.
-  * **Perfectly Organized Schedules:** The AI automatically creates a logical and easy-to-follow schedule. It organizes activities for each day, suggests places to eat, and creates a plan that flows smoothly, so you don't have to worry about the details.
+- **Instant, Intelligent Planning:** Instead of you doing the work, my AI does it in seconds. It acts like a super-smart travel agent that instantly builds a complete plan for you.
+- **A Plan That's 100% About You:** Journey AI listens to you. You tell it what you love, and it builds a trip around your personal interests, ensuring you have a vacation that you will truly enjoy.
+- **Perfectly Organized Schedules:** The AI automatically creates a logical and easy-to-follow schedule. It organizes activities for each day, suggests places to eat, and creates a plan that flows smoothly, so you don't have to worry about the details.
 
 ### How It Works: Overcoming Key Technical Challenges
 
@@ -247,16 +249,16 @@ This project's development centered on solving critical issues related to third-
 
 The most significant blocker was a persistent bug within the Portia AI agent's internal planning and execution logic.
 
-  * **The Problem: Internal Data Handoff Failure**
-    When the agent was given a complex, multi-part query, its internal planner would correctly break it down into a series of research steps. It would successfully execute these steps using its Portia Search Tool, which returned structured data. However, the agent would consistently crash when it reached the final step: synthesizing those results.
-    The root cause was a `pydantic.ValidationError` deep within the SDK. The agent was failing to properly pass the complex data structure from its own search tool as a valid input to its internal summarization tool. This data type mismatch created an unhandled exception, causing the entire process to fail.
+- **The Problem: Internal Data Handoff Failure**
+  When the agent was given a complex, multi-part query, its internal planner would correctly break it down into a series of research steps. It would successfully execute these steps using its Portia Search Tool, which returned structured data. However, the agent would consistently crash when it reached the final step: synthesizing those results.
+  The root cause was a `pydantic.ValidationError` deep within the SDK. The agent was failing to properly pass the complex data structure from its own search tool as a valid input to its internal summarization tool. This data type mismatch created an unhandled exception, causing the entire process to fail.
 
-  * **The Solution: A Three-Stage Manual Planning Architecture**
-    Since I could not modify the SDK's internal logic, I engineered a workaround that takes planning control away from the agent. My backend now manages a three-stage pipeline:
+- **The Solution: A Three-Stage Manual Planning Architecture**
+  Since I could not modify the SDK's internal logic, I engineered a workaround that takes planning control away from the agent. My backend now manages a three-stage pipeline:
 
-    1.  **Planner:** A preliminary Gemini API call deconstructs the user's complex prompt into a list of simple, single-topic search queries.
-    2.  **Researcher:** My code then loops through this list, feeding one simple query at a time to the Portia agent. By giving it only one straightforward task at a time, the agent's faulty multi-step planner is never triggered.
-    3.  **Synthesizer:** Finally, my backend collects the raw text from all the successful research steps and sends it to a final Gemini API call for a clean, reliable synthesis into the final itinerary.
+  1.  **Planner:** A preliminary Gemini API call deconstructs the user's complex prompt into a list of simple, single-topic search queries.
+  2.  **Researcher:** My code then loops through this list, feeding one simple query at a time to the Portia agent. By giving it only one straightforward task at a time, the agent's faulty multi-step planner is never triggered.
+  3.  **Synthesizer:** Finally, my backend collects the raw text from all the successful research steps and sends it to a final Gemini API call for a clean, reliable synthesis into the final itinerary.
 
 This architecture completely bypasses the SDK's internal bug, resulting in a stable and predictable system.
 
@@ -264,14 +266,14 @@ This architecture completely bypasses the SDK's internal bug, resulting in a sta
 
 The second major challenge was a persistent crash on the frontend, where the entire UI would disappear the moment it tried to render the AI's response.
 
-  * **The Problem: Fragile Markdown Parsing**
-    The issue was traced to the `react-markdown` library. This component was overly strict and would throw an unhandled exception if the AI-generated response contained any subtle, non-standard Markdown formatting or unusual characters. This fragility made the UI unreliable.
+- **The Problem: Fragile Markdown Parsing**
+  The issue was traced to the `react-markdown` library. This component was overly strict and would throw an unhandled exception if the AI-generated response contained any subtle, non-standard Markdown formatting or unusual characters. This fragility made the UI unreliable.
 
-  * **The Solution: A Decoupled Rendering Pipeline**
-    I replaced the single, fragile library with a more robust, two-step process that manually handles the conversion and sanitization of the AI's output.
+- **The Solution: A Decoupled Rendering Pipeline**
+  I replaced the single, fragile library with a more robust, two-step process that manually handles the conversion and sanitization of the AI's output.
 
-    1.  First, the `markdown-it` library is used to reliably convert the AI's text into a basic HTML string.
-    2.  Second, the `dompurify` library, an industry-standard security tool, sanitizes this HTML to strip out any potentially harmful or malformed elements that could cause a crash.
+  1.  First, the `markdown-it` library is used to reliably convert the AI's text into a basic HTML string.
+  2.  Second, the `dompurify` library, an industry-standard security tool, sanitizes this HTML to strip out any potentially harmful or malformed elements that could cause a crash.
 
 This pipeline guarantees that only safe and valid HTML is ever rendered, making the frontend completely resilient to unpredictable outputs from the AI.
 
@@ -289,7 +291,7 @@ services:
     build: ./backend
     ports:
       - "5001:5000"
-    
+
   database:
     image: postgres
     environment:
@@ -298,9 +300,9 @@ services:
 
 **What this file does, explained simply:**
 
-  * **`services:`**: This is a list of all the separate parts of my application.
-  * **`backend:`**: This defines the box for my backend (the server brain). `build: ./backend` tells Docker to build this box using the code in my "backend" folder. `ports: - "5001:5000"` lets the outside world talk to my backend on port 5001.
-  * **`database:`**: This defines the box for my database. `image: postgres` tells Docker to use a pre-made box for a PostgreSQL database. `environment:` sets important settings, like the password for the database.
+- **`services:`**: This is a list of all the separate parts of my application.
+- **`backend:`**: This defines the box for my backend (the server brain). `build: ./backend` tells Docker to build this box using the code in my "backend" folder. `ports: - "5001:5000"` lets the outside world talk to my backend on port 5001.
+- **`database:`**: This defines the box for my database. `image: postgres` tells Docker to use a pre-made box for a PostgreSQL database. `environment:` sets important settings, like the password for the database.
 
 ### Thank You\!
 
