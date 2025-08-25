@@ -80,7 +80,7 @@ const Header = () => {
               <span className={`font-medium text-sage-700 transition-all duration-300 ${
                 isScrolled ? 'text-xs' : 'text-sm'
               }`}>
-                user@example.com
+                im.tsukiyuki@gmail.com
               </span>
             </motion.div>
             <motion.button

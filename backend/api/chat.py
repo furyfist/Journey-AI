@@ -21,9 +21,11 @@ router = APIRouter()
 @router.post("/chat", response_model=ItineraryResponse, tags=["Main Flow"])
 async def chat_with_agent(request: PromptRequest):
     try:
-        final_itinerary = await itinerary_service.create_full_itinerary(request.prompt)
+        # Pass the user's main prompt to the service layer
+        final_itinerary = await itinerary_service.create_full_itinerary(request.main_prompt)
         return ItineraryResponse(itinerary=final_itinerary)
     except Exception as e:
+        print(f"An unexpected error occurred in /chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- Utility Endpoints ---

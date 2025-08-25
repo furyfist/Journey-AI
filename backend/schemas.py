@@ -1,9 +1,13 @@
 # backend/schemas.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 # --- Existing Models ---
 class PromptRequest(BaseModel):
-    prompt: str
+    main_prompt: str
+    user_email: str
+    send_copy_to: Optional[str] = None # This field is now optional
+    calendar_attendees: Optional[List[str]] = Field(default_factory=list) # Optional list of emails
 
 class ItineraryResponse(BaseModel):
     itinerary: str
