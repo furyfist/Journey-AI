@@ -1,21 +1,39 @@
-# api/chat.py
-from fastapi import APIRouter
-from services import portia_service
+# backend/api/chat.py
+import io
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from schemas import PromptRequest, ItineraryResponse, PdfRequest, EmailRequest
+from services import itinerary_service, pdf_service, email_service
 
-# An APIRouter is like a mini-FastAPI app
 router = APIRouter()
 
-@router.post("/chat")
-def handle_chat_request(request_data: dict):
-    """
-    Receives a request from the frontend, passes it to the
-    Portia service, and returns the result.
-    """
-    user_prompt = request_data.get("prompt")
-    if not user_prompt:
-        return {"error": "Prompt is missing"}, 400
+@router.post("/chat", response_model=ItineraryResponse)
+async def chat_with_agent(request: PromptRequest):
+    try:
+        final_itinerary = await itinerary_service.create_full_itinerary(request.prompt)
+        return ItineraryResponse(itinerary=final_itinerary)
+    except Exception as e:
+        print(f"An unexpected error occurred in /chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # Delegate the hard work to the service
-    itinerary = portia_service.generate_itinerary(user_prompt)
+@router.post("/download-pdf")
+async def download_pdf(request: PdfRequest):
+    try:
+        pdf_bytes = pdf_service.create_pdf_from_itinerary(request.markdown_text)
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes), 
+            media_type='application/pdf', 
+            headers={'Content-Disposition': 'attachment; filename=itinerary.pdf'}
+        )
+    except Exception as e:
+        print(f"An unexpected error occurred in /download-pdf: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF.")
 
-    return {"itinerary": itinerary}
+@router.post("/send-email")
+async def send_email(request: EmailRequest):
+    try:
+        await email_service.send_itinerary_email(request.email, request.markdown_text)
+        return {"message": "Email sent successfully!"}
+    except Exception as e:
+        print(f"An unexpected error occurred in /send-email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
