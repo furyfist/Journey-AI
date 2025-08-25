@@ -4,7 +4,7 @@ It is late on a Friday and you are all set for the weekend. Then your school fri
 
 Here’s the thing: nobody has time for that.
 
-Meet Journey AI. It is a travel planner that turns a few quick inputs into a ready-to-go itinerary. Tell it where you want to go, how much you want to spend, and what you care about—food, history, adventure, or just relaxing—and it builds a day-by-day plan that you can actually use.
+Meet Journey AI. It is a travel planner that turns a few quick inputs into a ready-to-go itinerary. Tell it where you want to go, how much you want to spend, and what you care about—food, history, adventure, or just relaxing—and it builds a day-by-day plan that you can actually use :)
 
 **A Note to the Development Team (PORTIA AI)**: A significant part of this project involved identifying and building a solution for a critical data-passing bug within the Portia AI SDK. The full technical breakdown can be found in the "Key Challenges & Solutions" section.
 
