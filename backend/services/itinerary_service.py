@@ -2,19 +2,13 @@
 import json
 import asyncio
 import google.generativeai as genai
+from schemas import PromptRequest as ChatRequest
 from core.config import portia_agent
+from services import flight_service, hotel_service, youtube_service, email_service, calendar_service
 
-# Import all the new feature services
-from services import flight_service, hotel_service, youtube_service
-
+# The get_structured_master_plan function is correct and does not need changes.
 async def get_structured_master_plan(user_prompt: str) -> dict:
-    """
-    Uses Gemini to parse the user's prompt and create a structured JSON master plan.
-    This is a much more intelligent planner than before.
-    """
     planner_model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    # This new prompt asks the AI to act as a parser and identify key details.
     prompt = (
         "You are a travel planning assistant. Your job is to parse a user's request and extract key information into a structured JSON object. "
         "Identify the destination, travel dates, number of travelers, and any specific features they request (flights, hotels, youtube). "
@@ -22,7 +16,6 @@ async def get_structured_master_plan(user_prompt: str) -> dict:
         f"User Request: \"{user_prompt}\"\n\n"
         "JSON Output:"
     )
-    
     try:
         response = await planner_model.generate_content_async(prompt)
         json_response = response.text.strip().replace("```json", "").replace("```", "")
@@ -32,74 +25,82 @@ async def get_structured_master_plan(user_prompt: str) -> dict:
         print(f"Error creating master plan: {e}")
         return {}
 
-async def create_full_itinerary(user_prompt: str) -> str:
+
+# --- THIS IS THE CORRECTED FUNCTION ---
+async def create_full_itinerary(request: ChatRequest) -> str:
     """
-    Orchestrates the new, more powerful 3-stage process to generate a rich itinerary.
+    Orchestrates the entire process: itinerary generation AND post-generation actions.
     """
     if not portia_agent:
         raise Exception("Research Agent not initialized.")
 
-    # STAGE 1: INTELLIGENT PLANNER
-    print(f"Stage 1: Creating master plan for prompt: '{user_prompt}'")
-    master_plan = await get_structured_master_plan(user_prompt)
+    print(f"Stage 1: Creating master plan for prompt: '{request.main_prompt}'")
+    master_plan = await get_structured_master_plan(request.main_prompt)
     if not master_plan:
         raise Exception("Failed to create a structured master plan.")
     print(f"Master plan created: {master_plan}")
     
-    # STAGE 2: DYNAMIC RESEARCHER (Concurrent Execution)
     print("Stage 2: Starting concurrent research...")
-    
     research_coroutines = []
-    features = master_plan.get("features_requested", [])
     
-    # Dynamically add tasks to the list based on the master plan
-    if "flights" in features:
+    # --- FIX START ---
+    # Correctly parse the 'features' dictionary from the master plan
+    features = master_plan.get("features", {})
+    
+    if features.get("flights"): # Check the boolean value in the dictionary
         research_coroutines.append(flight_service.find_flight_info(
-            origin=master_plan.get("origin", "user's location"), # Default origin
+            origin=master_plan.get("origin", "user's location"),
             destination=master_plan.get("destination"),
-            dates=master_plan.get("dates")
+            dates=str(master_plan.get("travel_dates")) # Pass dates as string
         ))
     
-    if "hotels" in features:
+    if features.get("hotels"): # Check the boolean value in the dictionary
         research_coroutines.append(hotel_service.find_hotel_info(
             destination=master_plan.get("destination"),
-            dates=master_plan.get("dates"),
-            guests=master_plan.get("travelers", 1) # Default to 1 guest
+            dates=str(master_plan.get("travel_dates")),
+            guests=master_plan.get("num_travelers", 1)
         ))
 
-    if "youtube" in features:
+    if features.get("youtube"): # Check the boolean value in the dictionary
         research_coroutines.append(youtube_service.find_youtube_vlogs(
             topic=f"travel in {master_plan.get('destination')}"
         ))
 
-    # Add generic research tasks
-    for topic in master_plan.get("generic_research_topics", []):
+    # Correctly get the list of topics from the 'research_topics' key
+    for topic in master_plan.get("research_topics", []):
         research_coroutines.append(portia_agent.arun(topic))
+    # --- FIX END ---
 
-    # Run all research tasks in parallel for hackathon-level speed
+    if not research_coroutines:
+        print("Warning: No research tasks were generated from the master plan.")
+        return "I was able to create a plan, but couldn't identify specific research tasks. Could you try rephrasing your request?"
+
     research_results = await asyncio.gather(*research_coroutines, return_exceptions=True)
     
-    # STAGE 3: MASTER SYNTHESIZER
     print("Stage 3: Aggregating and synthesizing all research...")
-    
-    # Aggregate results into a single, well-structured text block
     collected_research = ""
-    if "flights" in features:
-        collected_research += f"## Flight Information:\n{research_results.pop(0)}\n\n"
-    if "hotels" in features:
-        collected_research += f"## Hotel Options:\n{research_results.pop(0)}\n\n"
-    if "youtube" in features:
-        collected_research += f"## Recommended YouTube Vlogs:\n{research_results.pop(0)}\n\n"
     
-    # Add generic research results
+    # This logic handles the dynamic nature of the results
+    result_index = 0
+    if features.get("flights"):
+        collected_research += f"## Flight Information:\n{research_results[result_index]}\n\n"
+        result_index += 1
+    if features.get("hotels"):
+        collected_research += f"## Hotel Options:\n{research_results[result_index]}\n\n"
+        result_index += 1
+    if features.get("youtube"):
+        collected_research += f"## Recommended YouTube Vlogs:\n{research_results[result_index]}\n\n"
+        result_index += 1
+    
     collected_research += "## General Travel Research:\n"
-    for result in research_results:
+    # The rest of the results are from the generic topics
+    for i in range(result_index, len(research_results)):
+        result = research_results[i]
         if isinstance(result, Exception):
             collected_research += "- Research failed for one topic.\n"
         else:
             collected_research += f"- {str(result.outputs.final_output)}\n"
 
-    # Create the final, enhanced prompt for the synthesizer
     synthesizer_model = genai.GenerativeModel('gemini-1.5-flash')
     synthesis_prompt = (
         "You are an expert travel itinerary creator. You will be given pre-researched text, clearly separated by headings for flights, hotels, vlogs, and general topics. "
@@ -112,5 +113,29 @@ async def create_full_itinerary(user_prompt: str) -> str:
     synthesis_result = await synthesizer_model.generate_content_async(synthesis_prompt)
     final_itinerary = synthesis_result.text
     print("Stage 3: Master synthesis complete.")
+
+    print("Stage 4: Starting post-generation actions (email, calendar)...")
+    action_coroutines = []
     
+    if request.send_copy_to:
+        action_coroutines.append(
+            email_service.send_itinerary_email(request.send_copy_to, final_itinerary)
+        )
+        
+    if request.calendar_attendees:
+        action_coroutines.append(
+            calendar_service.add_event_to_calendar(
+                title=f"Trip to {master_plan.get('destination', 'your destination')}",
+                start_time="2025-11-10T09:00:00",
+                end_time="2025-11-14T18:00:00",
+                description="Your travel itinerary created by Journey AI.",
+                attendees=request.calendar_attendees
+            )
+        )
+        
+    if action_coroutines:
+        # Run these tasks in the background
+        asyncio.gather(*action_coroutines)
+        print("Stage 4: Actions are running in the background.")
+
     return final_itinerary

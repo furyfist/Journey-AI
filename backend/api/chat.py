@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 # Import all schemas
 from schemas import (
-    PromptRequest, ItineraryResponse, PdfRequest, EmailRequest,
+    PromptRequest as ChatRequest, ItineraryResponse, PdfRequest, EmailRequest,
     FlightRequest, HotelRequest, YoutubeRequest, CalendarEventRequest
 )
 
@@ -19,13 +19,16 @@ router = APIRouter()
 
 # --- Main Itinerary Endpoint ---
 @router.post("/chat", response_model=ItineraryResponse, tags=["Main Flow"])
-async def chat_with_agent(request: PromptRequest):
+async def chat_with_agent(request: ChatRequest): # <-- This now correctly uses the ChatRequest model
     try:
-        # Pass the user's main prompt to the service layer
-        final_itinerary = await itinerary_service.create_full_itinerary(request.main_prompt)
+        # --- THIS IS THE FIX ---
+        # We now pass the entire 'request' object to the service,
+        # not just the prompt string.
+        final_itinerary = await itinerary_service.create_full_itinerary(request)
+        # --- END OF FIX ---
+        
         return ItineraryResponse(itinerary=final_itinerary)
     except Exception as e:
-        print(f"An unexpected error occurred in /chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- Utility Endpoints ---
@@ -49,7 +52,7 @@ async def send_email(request: EmailRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- New Feature Test Endpoints ---
+# --- Feature Test Endpoints ---
 @router.post("/find-flights", tags=["Feature Tests"])
 async def find_flights(request: FlightRequest):
     try:
@@ -73,9 +76,7 @@ async def find_youtube_vlogs(request: YoutubeRequest):
         return {"youtube_data": youtube_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-# --- New Calendar Endpoint ---
 @router.post("/add-calendar-event", tags=["Feature Tests"])
 async def add_calendar_event(request: CalendarEventRequest):
     try:
