@@ -19,7 +19,7 @@ Meet Journey AI. It is a travel planner that turns a few quick inputs into a rea
 ### Frontend Design
 
 ![fronted - header](Images/frontend-header.png)
-![fronted - middle section](Images\frontend-middle-section.png)
+![fronted - middle section](Images/frontend-middle-section.png)
 ![fronted - explore section](Images/frontend-explore-section.png)
 
 ### My Technology Stack (The tools I used to build Journey AI)
