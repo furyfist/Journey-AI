@@ -2,6 +2,7 @@
 import io
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from services.itinerary_service import generate_itinerary_with_agent
 
 # Import all schemas
 from schemas import (
@@ -24,7 +25,7 @@ async def chat_with_agent(request: ChatRequest): # <-- This now correctly uses t
         # --- THIS IS THE FIX ---
         # We now pass the entire 'request' object to the service,
         # not just the prompt string.
-        final_itinerary = await itinerary_service.create_full_itinerary(request)
+        final_itinerary = await generate_itinerary_with_agent(request)
         # --- END OF FIX ---
         
         return ItineraryResponse(itinerary=final_itinerary)
