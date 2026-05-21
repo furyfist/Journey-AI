@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Move-Item \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\backendplan.md\" \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\docs\\\\backend_build_plan.md\")"
+      "Bash(Move-Item \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\backendplan.md\" \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\docs\\\\backend_build_plan.md\")",
+      "Bash(\"venv/Scripts/python\" -m pytest -v)"
     ]
   }
 }

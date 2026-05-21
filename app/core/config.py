@@ -1,6 +1,5 @@
 import json
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,19 +10,11 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_host: str = "0.0.0.0"
     log_level: str = "INFO"
-    cors_origins: list[str] = ["http://localhost:3000"]
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: object) -> list[str]:
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            stripped = v.strip()
-            if stripped.startswith("["):
-                return json.loads(stripped)
-            return [origin.strip() for origin in stripped.split(",") if origin.strip()]
-        return v
+    # Stored as a raw string so pydantic-settings never tries to JSON-parse it
+    # from the .env file. Use settings.cors_origins_list everywhere in the app.
+    # Accepts: "http://localhost:3000"  OR  "http://a.com,http://b.com"  OR  '["http://a.com"]'
+    cors_origins: str = "http://localhost:3000"
 
     supabase_url: str = ""
     supabase_service_key: str = ""
@@ -38,6 +29,13 @@ class Settings(BaseSettings):
     open_meteo_base_url: str = "https://api.open-meteo.com/v1"
     overpass_api_url: str = "https://overpass-api.de/api/interpreter"
     geocoding_api_url: str = "https://geocoding-api.open-meteo.com/v1/search"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        v = self.cors_origins.strip()
+        if v.startswith("["):
+            return json.loads(v)
+        return [o.strip() for o in v.split(",") if o.strip()]
 
 
 settings = Settings()
