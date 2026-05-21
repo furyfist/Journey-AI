@@ -10,11 +10,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000"]
 
-    supabase_url: str
-    supabase_service_key: str
+    supabase_url: str = ""
+    supabase_service_key: str = ""
     supabase_anon_key: str = ""
 
-    groq_api_key: str
+    groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     groq_fallback_model: str = "llama-4-scout"
     groq_max_tokens: int = 8192

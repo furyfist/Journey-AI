@@ -1,10 +1,10 @@
 """
-Integration tests for trip CRUD endpoints.
-Groq and Supabase are mocked — only FastAPI routing and service logic are exercised.
+Integration tests for Trip CRUD endpoints.
+Supabase and Groq are mocked — only FastAPI routing + service logic are exercised.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 
 SAMPLE_TRIP = {
     "id": "00000000-0000-0000-0000-000000000001",
@@ -22,37 +22,48 @@ SAMPLE_TRIP = {
 }
 
 
-def _make_db_mock(trip_data: dict | None = None):
-    db = MagicMock()
+def _wire_db(mock_db: MagicMock, trip: dict = SAMPLE_TRIP) -> None:
+    """Configure a mock_db so every repository call returns predictable data."""
+    tb = mock_db.table.return_value
 
-    insert_mock = AsyncMock(return_value=MagicMock(data=[trip_data or SAMPLE_TRIP]))
-    db.table.return_value.insert.return_value.execute = insert_mock
+    # INSERT
+    tb.insert.return_value.execute = AsyncMock(return_value=MagicMock(data=[trip]))
 
-    select_mock = AsyncMock(return_value=MagicMock(data=[trip_data or SAMPLE_TRIP]))
-    db.table.return_value.select.return_value.eq.return_value.single.return_value.execute = select_mock
-    db.table.return_value.select.return_value.limit.return_value.execute = AsyncMock(
+    # SELECT * list
+    tb.select.return_value.order.return_value.execute = AsyncMock(
+        return_value=MagicMock(data=[trip])
+    )
+    tb.select.return_value.eq.return_value.order.return_value.execute = AsyncMock(
+        return_value=MagicMock(data=[trip])
+    )
+
+    # SELECT single trip
+    tb.select.return_value.eq.return_value.single.return_value.execute = AsyncMock(
+        return_value=MagicMock(data=trip)
+    )
+
+    # SELECT active itinerary join (returns empty — no itinerary yet)
+    tb.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = AsyncMock(
         return_value=MagicMock(data=[])
     )
-    db.table.return_value.select.return_value.order.return_value.execute = AsyncMock(
-        return_value=MagicMock(data=[trip_data or SAMPLE_TRIP])
-    )
-    db.table.return_value.delete.return_value.eq.return_value.execute = AsyncMock(
+
+    # Health check probe
+    tb.select.return_value.limit.return_value.execute = AsyncMock(
         return_value=MagicMock(data=[])
     )
 
-    # itinerary join used by fetch_trip_detail
-    itinerary_mock = AsyncMock(return_value=MagicMock(data=[]))
-    db.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = itinerary_mock
+    # DELETE
+    tb.delete.return_value.eq.return_value.execute = AsyncMock(
+        return_value=MagicMock(data=[])
+    )
 
-    return db
 
+# ---------------------------------------------------------------------------
+# POST /api/v1/trips
+# ---------------------------------------------------------------------------
 
-def test_create_trip(client, mock_http):
-    from app.main import app
-
-    app.state.db = _make_db_mock()
-    app.state.http = mock_http
-
+def test_create_trip_returns_201(client, mock_db):
+    _wire_db(mock_db)
     resp = client.post(
         "/api/v1/trips",
         json={
@@ -63,27 +74,77 @@ def test_create_trip(client, mock_http):
         },
     )
     assert resp.status_code == 201
-    data = resp.json()
-    assert data["destination"] == "Tokyo"
-    assert data["status"] == "pending"
+    body = resp.json()
+    assert body["destination"] == "Tokyo"
+    assert body["status"] == "pending"
+    assert body["total_days"] == 5
 
 
-def test_list_trips(client, mock_http):
-    from app.main import app
+def test_create_trip_infers_unknown_destination(client, mock_db):
+    """When no destination is given the service uses 'Unknown' as placeholder."""
+    no_dest = {**SAMPLE_TRIP, "destination": "Unknown", "title": "Trip to Unknown"}
+    _wire_db(mock_db, trip=no_dest)
+    resp = client.post(
+        "/api/v1/trips",
+        json={"prompt": "I want to go somewhere really cool for a week"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["destination"] == "Unknown"
 
-    app.state.db = _make_db_mock()
-    app.state.http = mock_http
 
+def test_create_trip_rejects_short_prompt(client, mock_db):
+    resp = client.post("/api/v1/trips", json={"prompt": "short"})
+    assert resp.status_code == 422
+
+
+def test_create_trip_rejects_days_over_limit(client, mock_db):
+    resp = client.post(
+        "/api/v1/trips",
+        json={"prompt": "Long trip prompt that is definitely long enough", "total_days": 31},
+    )
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/trips
+# ---------------------------------------------------------------------------
+
+def test_list_trips_returns_list(client, mock_db):
+    _wire_db(mock_db)
     resp = client.get("/api/v1/trips")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+    assert resp.json()[0]["destination"] == "Tokyo"
 
 
-def test_delete_trip(client, mock_http):
-    from app.main import app
+# ---------------------------------------------------------------------------
+# GET /api/v1/trips/{trip_id}
+# ---------------------------------------------------------------------------
 
-    app.state.db = _make_db_mock()
-    app.state.http = mock_http
+def test_get_trip_returns_detail(client, mock_db):
+    _wire_db(mock_db)
+    resp = client.get("/api/v1/trips/00000000-0000-0000-0000-000000000001")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == "00000000-0000-0000-0000-000000000001"
+    assert body["itinerary"] is None       # no itinerary saved yet
+    assert body["conflicts"] == []
 
+
+def test_get_trip_not_found_returns_404(client, mock_db):
+    """When Supabase returns no data for the ID, we expect 404."""
+    mock_db.table.return_value.select.return_value.eq.return_value.single.return_value.execute = (
+        AsyncMock(return_value=MagicMock(data=None))
+    )
+    resp = client.get("/api/v1/trips/00000000-0000-0000-0000-000000000099")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v1/trips/{trip_id}
+# ---------------------------------------------------------------------------
+
+def test_delete_trip_returns_204(client, mock_db):
+    _wire_db(mock_db)
     resp = client.delete("/api/v1/trips/00000000-0000-0000-0000-000000000001")
     assert resp.status_code == 204
