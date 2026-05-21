@@ -1,3 +1,6 @@
+import json
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +12,18 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: object) -> list[str]:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            stripped = v.strip()
+            if stripped.startswith("["):
+                return json.loads(stripped)
+            return [origin.strip() for origin in stripped.split(",") if origin.strip()]
+        return v
 
     supabase_url: str = ""
     supabase_service_key: str = ""
