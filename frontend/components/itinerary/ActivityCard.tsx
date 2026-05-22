@@ -1,3 +1,5 @@
+"use client";
+
 import type { Activity } from "@/lib/types/trip";
 import {
   Accordion,
