@@ -1,44 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/shared/Navbar";
 import PageWrapper from "@/components/shared/PageWrapper";
 import PromptEcho from "@/components/generate/PromptEcho";
 import AgentPipeline from "@/components/generate/AgentPipeline";
 import LiveLog from "@/components/generate/LiveLog";
-import { sseFixtureEvents } from "@/fixtures/sseEvents";
-import type { SSEEvent } from "@/lib/types/planning";
+import { useSSEStream } from "@/hooks/useSSEStream";
+
+const STATUS_LABELS: Record<string, string> = {
+  connecting: "Connecting...",
+  streaming: "Streaming",
+  complete: "Complete",
+  error: "Connection error",
+};
 
 export default function GeneratePage() {
-  const [events, setEvents] = useState<SSEEvent[]>([]);
-  const [activeAgent, setActiveAgent] = useState<string | null>(null);
-  const [completedAgents, setCompletedAgents] = useState<string[]>([]);
+  const params = useParams<{ tripId: string }>();
+  const tripId = params?.tripId ?? "";
+  const router = useRouter();
+
+  const { events, activeAgent, completedAgents, status, isComplete } =
+    useSSEStream(tripId);
 
   useEffect(() => {
-    let idx = 0;
-
-    const interval = setInterval(() => {
-      if (idx >= sseFixtureEvents.length) {
-        clearInterval(interval);
-        return;
-      }
-
-      const e = sseFixtureEvents[idx];
-      idx++;
-
-      setEvents((prev) => [...prev, e]);
-
-      if (e.event === "agent_start" && e.agent) {
-        setActiveAgent(e.agent);
-      }
-      if (e.event === "agent_complete" && e.agent) {
-        setCompletedAgents((prev) => [...prev, e.agent!]);
-        setActiveAgent(null);
-      }
-    }, 300);
-
-    return () => clearInterval(interval);
-  }, []);
+    if (!isComplete) return;
+    const t = setTimeout(() => router.push(`/trips/${tripId}`), 500);
+    return () => clearTimeout(t);
+  }, [isComplete, tripId, router]);
 
   return (
     <>
@@ -52,6 +42,9 @@ export default function GeneratePage() {
               Planning your trip
             </p>
             <AgentPipeline activeAgent={activeAgent} completedAgents={completedAgents} />
+            <p className="text-xs text-[var(--text-muted)] mt-2">
+              {STATUS_LABELS[status] ?? status}
+            </p>
           </div>
 
           <LiveLog events={events} onRetry={() => window.location.reload()} />
