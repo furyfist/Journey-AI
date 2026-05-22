@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.core.dependencies import DBDep
+from app.core.dependencies import DBDep, HttpDep
 from app.trips import service
 from app.trips.schemas import TripCreate, TripDetail, TripListItem, TripResponse
 
@@ -10,13 +10,13 @@ router = APIRouter(prefix="/trips", tags=["trips"])
 
 
 @router.post("", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
-async def create_trip(payload: TripCreate, db: DBDep):
+async def create_trip(payload: TripCreate, db: DBDep, http: HttpDep):
     """
-    Create a new trip from a natural language prompt.
-    Returns immediately with status 'pending'. The AI pipeline will be
-    triggered in Session 3 — for now the record is saved and ready.
+    Create a trip and run the full AI planning pipeline synchronously.
+    Returns the saved trip (status 'completed' or 'failed').
+    SSE streaming will be added in Session 4.
     """
-    trip = await service.create_trip(db, payload)
+    trip = await service.create_trip(db, http, payload)
     return trip
 
 
