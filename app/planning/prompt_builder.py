@@ -1,6 +1,6 @@
 import json
 
-from app.planning.schemas import ItinerarySchema, ResearchBundle
+from app.planning.schemas import Conflict, ItinerarySchema, ResearchBundle
 
 
 def researcher_system_prompt() -> str:
@@ -85,4 +85,40 @@ def synthesizer_user_message(
         f"Available places:\n{json.dumps(research.places, default=str)}\n\n"
         f"Rough plan to convert:\n{json.dumps(rough_plan, indent=2)}\n\n"
         "Generate the complete itinerary JSON now."
+    )
+
+
+def critic_system_prompt() -> str:
+    conflict_schema = Conflict.model_json_schema()
+    return (
+        "You are a travel itinerary critic. Review the trip plan and identify any quality issues "
+        "the traveler would notice on the ground.\n\n"
+        "Check for:\n"
+        "1. Weather mismatches — outdoor activities on a stormy or snowy day.\n"
+        "2. Distance conflicts — consecutive activities that are unrealistically far apart.\n"
+        "3. Timing feasibility — activities that leave no time for travel or meals.\n"
+        "4. Budget conflicts — expensive venues that contradict the stated budget level.\n"
+        "5. Persona mismatches — e.g. nightclubs for Family Traveler, budget hostels for Luxury Explorer.\n\n"
+        "For each genuine problem, output a Conflict object. "
+        "If the plan looks sound, output an empty array.\n\n"
+        f"Conflict schema:\n{json.dumps(conflict_schema, indent=2)}\n\n"
+        "Output ONLY a JSON object with a single key 'conflicts' containing a list of Conflict objects. "
+        "Example: {\"conflicts\": []}"
+    )
+
+
+def critic_user_message(
+    itinerary: ItinerarySchema,
+    pre_conflicts: list[Conflict],
+    research: ResearchBundle,
+) -> str:
+    return (
+        f"Review this {itinerary.total_days}-day itinerary for {itinerary.destination}.\n\n"
+        f"Traveler persona: {itinerary.persona}\n"
+        f"Budget level: {itinerary.budget_level}\n\n"
+        f"Itinerary:\n{json.dumps(itinerary.model_dump(), default=str)}\n\n"
+        f"Weather data:\n{json.dumps(research.weather, default=str)}\n\n"
+        f"Pre-computed structural conflicts (for context — do not duplicate these):\n"
+        f"{json.dumps([c.model_dump() for c in pre_conflicts], default=str)}\n\n"
+        "Identify any additional quality issues. Return only the JSON object."
     )

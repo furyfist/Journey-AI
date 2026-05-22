@@ -5,10 +5,12 @@ import httpx
 from supabase import AsyncClient
 
 from app.common.logger import get_logger
+from app.planning.agents.critic_agent import CriticAgent
 from app.planning.agents.planner_agent import PlannerAgent
 from app.planning.agents.researcher_agent import ResearcherAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
-from app.planning.schemas import ItinerarySchema, ResearchBundle
+from app.planning.conflict_checker import run_conflict_checks
+from app.planning.schemas import Conflict, ItinerarySchema, ResearchBundle
 from app.trips import repository as trip_repo
 
 logger = get_logger(__name__)
@@ -24,7 +26,7 @@ async def run_planning_pipeline(
     start_date: Optional[str] = None,
     budget: Optional[str] = None,
 ) -> ItinerarySchema:
-    """Researcher → Planner → Synthesizer. Saves results to DB. Raises on failure."""
+    """Researcher → Planner → Synthesizer → Critic. Saves results to DB. Raises on failure."""
     await trip_repo.update_trip_status(db, trip_id, "generating")
 
     try:
@@ -46,7 +48,21 @@ async def run_planning_pipeline(
         synthesizer = SynthesizerAgent(http)
         itinerary: ItinerarySchema = await synthesizer.run_synthesis(prompt, research, rough_plan)
 
-        await _persist(db, trip_id, itinerary, research, rough_plan.get("persona", itinerary.persona))
+        logger.info("trip=%s step=conflict_check", trip_id)
+        pre_conflicts = run_conflict_checks(itinerary)
+
+        logger.info("trip=%s step=critic pre_conflicts=%d", trip_id, len(pre_conflicts))
+        critic = CriticAgent(http)
+        llm_conflicts = await critic.run_critique(itinerary, pre_conflicts, research)
+
+        all_conflicts = pre_conflicts + llm_conflicts
+        logger.info("trip=%s total_conflicts=%d", trip_id, len(all_conflicts))
+
+        await _persist(
+            db, trip_id, itinerary, research,
+            rough_plan.get("persona", itinerary.persona),
+            all_conflicts,
+        )
         return itinerary
 
     except Exception as exc:
@@ -61,6 +77,7 @@ async def _persist(
     itinerary: ItinerarySchema,
     research: ResearchBundle,
     persona: str,
+    conflicts: list[Conflict],
 ) -> None:
     await db.table("trips").update(
         {
@@ -81,7 +98,7 @@ async def _persist(
             "itinerary_data": itinerary.model_dump(),
             "weather_data": research.weather,
             "places_data": research.places,
-            "conflicts": [],
+            "conflicts": [c.model_dump() for c in conflicts],
             "reasoning": {},
             "is_active": True,
         }
