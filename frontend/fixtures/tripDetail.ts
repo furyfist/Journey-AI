@@ -23,6 +23,14 @@ export const tripDetailFixture: TripDetail = {
       activities: ["Tsukiji Outer Market", "teamLab Borderless"],
     },
     {
+      type: "budget_overrun",
+      severity: "error",
+      day_number: 2,
+      description:
+        "teamLab Borderless (¥3,200) combined with Shibuya Sky (¥2,000) exceeds the daily budget cap for a budget traveller.",
+      activities: ["teamLab Borderless", "Shibuya Sky"],
+    },
+    {
       type: "distance",
       severity: "error",
       day_number: 3,
