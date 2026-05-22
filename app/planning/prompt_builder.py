@@ -59,6 +59,97 @@ def planner_user_message(prompt: str, research: ResearchBundle) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Regeneration prompts
+# ---------------------------------------------------------------------------
+
+def regen_full_user_message(prompt: str, research: ResearchBundle, constraint: str | None) -> str:
+    parts = [f"Replan a {research.total_days}-day trip to {research.destination}."]
+    if constraint:
+        parts.append(f"Constraint for this replan: {constraint}.")
+    parts.append(f"Original request: {prompt}")
+    parts.append(f"Weather data:\n{json.dumps(research.weather, default=str)}")
+    parts.append(f"Available places:\n{json.dumps(research.places, default=str)}")
+    parts.append("Build the day-by-day plan. Return only the JSON object.")
+    return "\n\n".join(parts)
+
+
+def regen_day_system_prompt() -> str:
+    from app.planning.schemas import DayPlan
+    schema = DayPlan.model_json_schema()
+    return (
+        "You are a travel day planner. Regenerate a single day's plan.\n\n"
+        f"Required DayPlan schema:\n{json.dumps(schema, indent=2)}\n\n"
+        "Rules:\n"
+        "- Keep the same day_number and date.\n"
+        "- Each time block must have 1–4 activities.\n"
+        "- Use real place names from the research data.\n"
+        "- Apply the constraint exactly.\n"
+        "- Output ONLY the DayPlan JSON object — no markdown, no explanation."
+    )
+
+
+def regen_day_user_message(
+    day_number: int,
+    itinerary: "ItinerarySchema",
+    research: ResearchBundle,
+    constraint: str | None,
+) -> str:
+    existing_day = next((d for d in itinerary.days if d.day_number == day_number), None)
+    weather_snap = existing_day.weather if existing_day else None
+    parts = [
+        f"Regenerate day {day_number} of a {itinerary.total_days}-day trip to {itinerary.destination}.",
+        f"Traveler persona: {itinerary.persona}",
+        f"Budget level: {itinerary.budget_level}",
+    ]
+    if constraint:
+        parts.append(f"Constraint: {constraint}")
+    parts.append(f"Weather for this day:\n{json.dumps(weather_snap, default=str)}")
+    parts.append(f"Available places:\n{json.dumps(research.places, default=str)}")
+    parts.append("Return only the DayPlan JSON.")
+    return "\n\n".join(parts)
+
+
+def regen_block_system_prompt() -> str:
+    from app.planning.schemas import TimeBlock
+    schema = TimeBlock.model_json_schema()
+    return (
+        "You are a travel block planner. Regenerate a single time block.\n\n"
+        f"Required TimeBlock schema:\n{json.dumps(schema, indent=2)}\n\n"
+        "Rules:\n"
+        "- Keep the same label, start_time, and end_time as the original block.\n"
+        "- 1–4 activities.\n"
+        "- Use real place names from the research data.\n"
+        "- Apply the constraint exactly.\n"
+        "- Output ONLY the TimeBlock JSON object — no markdown, no explanation."
+    )
+
+
+def regen_block_user_message(
+    day_number: int,
+    block_label: str,
+    itinerary: "ItinerarySchema",
+    research: ResearchBundle,
+    constraint: str | None,
+) -> str:
+    day = next((d for d in itinerary.days if d.day_number == day_number), None)
+    existing_block = getattr(day, block_label, None) if day else None
+    parts = [
+        f"Regenerate the {block_label} block for day {day_number} of a trip to {itinerary.destination}.",
+        f"Traveler persona: {itinerary.persona}",
+        f"Budget level: {itinerary.budget_level}",
+    ]
+    if constraint:
+        parts.append(f"Constraint: {constraint}")
+    parts.append(
+        f"Current block (for reference):\n"
+        f"{json.dumps(existing_block.model_dump() if existing_block else {}, default=str)}"
+    )
+    parts.append(f"Available places:\n{json.dumps(research.places, default=str)}")
+    parts.append("Return only the TimeBlock JSON.")
+    return "\n\n".join(parts)
+
+
 def synthesizer_system_prompt() -> str:
     schema = ItinerarySchema.model_json_schema()
     return (
