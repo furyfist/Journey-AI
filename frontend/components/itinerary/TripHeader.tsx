@@ -1,3 +1,5 @@
+"use client";
+
 import type { TripDetail, ItinerarySchema } from "@/lib/types/trip";
 import Badge from "@/components/shared/Badge";
 import {
