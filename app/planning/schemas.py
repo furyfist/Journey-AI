@@ -1,6 +1,14 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+
+
+class Conflict(BaseModel):
+    type: Literal["distance", "timing", "weather", "budget", "persona"]
+    severity: Literal["warning", "error"]
+    day_number: int
+    description: str
+    activities: list[str] = []
 
 
 class Activity(BaseModel):
