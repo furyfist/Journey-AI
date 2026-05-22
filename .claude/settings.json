@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(venv/Scripts/python -m pytest tests/integration/test_regeneration.py -v --tb=short)"
+    ]
+  }
+}
