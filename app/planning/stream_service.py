@@ -162,11 +162,26 @@ async def _persist(
         }
     ).eq("id", trip_id).execute()
 
+    # Deactivate any existing active itinerary and determine next version number.
+    existing = (
+        await db.table("itineraries")
+        .select("version")
+        .eq("trip_id", trip_id)
+        .order("version", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        await db.table("itineraries").update({"is_active": False}).eq("trip_id", trip_id).eq("is_active", True).execute()
+        next_version = existing.data[0]["version"] + 1
+    else:
+        next_version = 1
+
     await db.table("itineraries").insert(
         {
             "id": str(uuid.uuid4()),
             "trip_id": trip_id,
-            "version": 1,
+            "version": next_version,
             "itinerary_data": itinerary.model_dump(),
             "weather_data": research.weather,
             "places_data": research.places,

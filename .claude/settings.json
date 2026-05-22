@@ -3,7 +3,25 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(venv/Scripts/python -m pytest tests/integration/test_regeneration.py -v --tb=short)"
+      "Bash(venv/Scripts/python -m pytest tests/integration/test_regeneration.py -v --tb=short)",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\frontend\" -Force)",
+      "Read(//mnt/c/Users/himan/AppData/Local/Temp/claude/c--Users-himan-OneDrive-Desktop-journey-ai/37695e08-2f5a-4f54-b30b-339f59c9b9c8/tasks/**)",
+      "Bash(find \"c:\\\\\\\\Users\\\\\\\\himan\\\\\\\\OneDrive\\\\\\\\Desktop\\\\\\\\journey_ai\\\\\\\\frontend\" -type f -o -type d)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\himan\\\\OneDrive\\\\Desktop\\\\journey_ai\\\\frontend\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(cd /c/Users/himan/OneDrive/Desktop/journey_ai/frontend && find . -maxdepth 3 -type d | head -100)",
+      "Read(//c/c/Users/himan/OneDrive/Desktop/journey_ai/**)",
+      "Bash(grep -v \"^$\")",
+      "Bash(awk '{print length\\($0\\), $0}')",
+      "Bash(awk '{$1=\"\"; print $0}')",
+      "Bash(awk 'NF {print}')",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(npm run *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\himan\\OneDrive\\Desktop\\journey_ai\\frontend\\app\\(public)\\generate"
     ]
   }
 }
