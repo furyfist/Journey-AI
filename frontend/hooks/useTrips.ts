@@ -9,12 +9,20 @@ interface UseTripsResult {
   loading: boolean;
   error: string | null;
   deleteAndRefresh: (id: string) => Promise<void>;
+  refetch: () => void;
 }
 
 export function useTrips(): UseTripsResult {
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fetchCount, setFetchCount] = useState(0);
+
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setFetchCount((c) => c + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,12 +42,12 @@ export function useTrips(): UseTripsResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchCount]);
 
   const deleteAndRefresh = useCallback(async (id: string) => {
     await deleteTrip(id);
     setTrips((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  return { trips, loading, error, deleteAndRefresh };
+  return { trips, loading, error, deleteAndRefresh, refetch };
 }

@@ -25,7 +25,7 @@ function TripCardSkeleton() {
 }
 
 export default function TripsPage() {
-  const { trips, loading, error, deleteAndRefresh } = useTrips();
+  const { trips, loading, error, deleteAndRefresh, refetch } = useTrips();
 
   return (
     <>
@@ -38,7 +38,7 @@ export default function TripsPage() {
             </h1>
             <Link
               href="/"
-              className="text-sm font-medium text-[var(--accent)] hover:underline"
+              className="text-sm font-medium text-accent-sage hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
               Plan a new trip
             </Link>
@@ -56,8 +56,8 @@ export default function TripsPage() {
             <div className="text-center py-16">
               <p className="text-sm text-rose-500 mb-4">{error}</p>
               <button
-                onClick={() => window.location.reload()}
-                className="text-sm text-[var(--accent)] hover:underline"
+                onClick={refetch}
+                className="text-sm text-accent-sage underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
                 Retry
               </button>

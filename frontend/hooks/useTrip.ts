@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { getTrip } from "@/lib/api/trips";
 import type { TripDetail, ItinerarySchema } from "@/lib/types/trip";
 
@@ -10,12 +10,20 @@ interface UseTripResult {
   itinerary: ItinerarySchema | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 export function useTrip(tripId: string): UseTripResult {
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fetchCount, setFetchCount] = useState(0);
+
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setFetchCount((c) => c + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,9 +43,9 @@ export function useTrip(tripId: string): UseTripResult {
     return () => {
       cancelled = true;
     };
-  }, [tripId]);
+  }, [tripId, fetchCount]);
 
   const itinerary = trip?.itinerary ? (trip.itinerary as ItinerarySchema) : null;
 
-  return { trip, setTrip, itinerary, loading, error };
+  return { trip, setTrip, itinerary, loading, error, refetch };
 }
