@@ -2,6 +2,7 @@ import type { DayPlan, Conflict, TripDetail } from "@/lib/types/trip";
 import WeatherStrip from "./WeatherStrip";
 import TimeBlock from "./TimeBlock";
 import RegenerateControl from "./RegenerateControl";
+import ConflictBanner from "./ConflictBanner";
 
 interface DaySectionProps {
   day: DayPlan;
@@ -52,25 +53,7 @@ export default function DaySection({
       {conflicts.length > 0 && (
         <div className="flex flex-col gap-2">
           {conflicts.map((conflict, i) => (
-            <div
-              key={i}
-              role="alert"
-              className={`flex items-start gap-3 rounded-lg border-l-4 px-4 py-3 ${
-                conflict.severity === "error"
-                  ? "border-danger bg-red-50"
-                  : "border-warning bg-amber-50"
-              }`}
-            >
-              <span className="mt-0.5 text-base leading-none">
-                {conflict.severity === "error" ? "✕" : "⚠"}
-              </span>
-              <div>
-                <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  {conflict.type.replace(/_/g, " ")}
-                </p>
-                <p className="text-sm text-text-primary">{conflict.description}</p>
-              </div>
-            </div>
+            <ConflictBanner key={i} conflict={conflict} />
           ))}
         </div>
       )}
