@@ -110,6 +110,21 @@
 
 /* Journey AI is light-only by design — no dark mode */
 
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-log-in {
+  animation: log-in 80ms ease-out;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
