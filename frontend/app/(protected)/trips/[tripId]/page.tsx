@@ -12,11 +12,63 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTrip } from "@/hooks/useTrip";
 import type { Conflict, TripDetail } from "@/lib/types/trip";
 
+function ActivityCardSkeleton() {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-2">
+      <div className="flex items-start gap-3">
+        <Skeleton className="mt-0.5 h-6 w-6 shrink-0 rounded" />
+        <div className="flex-1 space-y-1.5">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-3 w-1/4" />
+        </div>
+      </div>
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-5/6" />
+    </div>
+  );
+}
+
+function TimeBlockSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline gap-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+      <Skeleton className="h-3 w-2/3" />
+      <div className="flex flex-col gap-3">
+        <ActivityCardSkeleton />
+        <ActivityCardSkeleton />
+      </div>
+    </div>
+  );
+}
+
+function DaySectionSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 border-b border-border py-8">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-5 w-48" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-8">
+        <TimeBlockSkeleton />
+        <TimeBlockSkeleton />
+        <TimeBlockSkeleton />
+      </div>
+    </div>
+  );
+}
+
 export default function TripDetailPage() {
   const params = useParams<{ tripId: string }>();
   const tripId = params?.tripId ?? "";
 
-  const { trip, setTrip, itinerary, loading, error } = useTrip(tripId);
+  const { trip, setTrip, itinerary, loading, error, refetch } = useTrip(tripId);
 
   const [activeDayNumber, setActiveDayNumber] = useState(1);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -65,14 +117,20 @@ export default function TripDetailPage() {
       <>
         <Navbar />
         <PageWrapper>
-          <div className="flex flex-col gap-6 py-8">
-            <Skeleton className="h-10 w-3/4 rounded" />
+          <div className="flex flex-col gap-4 border-b border-border py-8">
+            <Skeleton className="h-9 w-3/4 rounded" />
             <Skeleton className="h-5 w-1/3 rounded" />
             <Skeleton className="h-4 w-1/4 rounded" />
-            <div className="mt-2 flex gap-2">
+            <div className="flex gap-2">
               <Skeleton className="h-6 w-24 rounded-full" />
               <Skeleton className="h-6 w-20 rounded-full" />
             </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+          <div className="py-4">
+            <DaySectionSkeleton />
+            <DaySectionSkeleton />
           </div>
         </PageWrapper>
       </>
@@ -85,10 +143,10 @@ export default function TripDetailPage() {
         <Navbar />
         <PageWrapper>
           <div className="py-16 text-center">
-            <p className="mb-4 text-text-secondary">Failed to load itinerary.</p>
+            <p className="mb-4 text-sm text-text-secondary">Failed to load itinerary.</p>
             <button
-              onClick={() => window.location.reload()}
-              className="text-sm text-accent-sage underline underline-offset-2"
+              onClick={refetch}
+              className="text-sm text-accent-sage underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
               Try again
             </button>
@@ -155,7 +213,7 @@ export default function TripDetailPage() {
               />
             ))}
 
-            <div className="py-6">
+            <div className="relative py-6">
               <RegenerateControl
                 tripId={tripId}
                 scope="full_trip"
