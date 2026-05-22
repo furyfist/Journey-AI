@@ -39,7 +39,8 @@ export function useSSEStream(tripId: string): UseSSEStreamResult {
   useEffect(() => {
     if (!tripId) return;
 
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/trips/${tripId}/stream`;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    const url = `${apiBase}/api/v1/trips/${tripId}/stream`;
     const es = new EventSource(url);
 
     function handleEvent(ev: MessageEvent) {
