@@ -11,13 +11,13 @@ export default function TimeBlock({ block }: TimeBlockProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline gap-2">
-        <h4 className="font-medium text-[var(--text-primary)]">{label}</h4>
-        <span className="text-sm text-[var(--text-muted)]">
+        <h4 className="font-medium text-text-primary">{label}</h4>
+        <span className="text-sm text-text-muted">
           {block.start_time} – {block.end_time}
         </span>
       </div>
       {block.block_summary && (
-        <p className="text-sm text-[var(--text-secondary)]">{block.block_summary}</p>
+        <p className="text-sm text-text-secondary">{block.block_summary}</p>
       )}
       <div className="flex flex-col gap-3">
         {block.activities.map((activity, i) => (

@@ -10,15 +10,15 @@ interface DaySectionProps {
 
 export default function DaySection({ day, conflicts, sectionRef }: DaySectionProps) {
   return (
-    <div ref={sectionRef} className="flex flex-col gap-6 py-8 border-b border-[var(--border)] last:border-0">
+    <div ref={sectionRef} className="flex flex-col gap-6 py-8 border-b border-border last:border-0">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--accent-light)] text-[var(--accent-sage)] text-sm font-semibold shrink-0">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent-light text-accent-sage text-sm font-semibold shrink-0">
             {day.day_number}
           </span>
           <div>
             {day.date && (
-              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide">
+              <p className="text-xs text-text-muted uppercase tracking-wide">
                 {new Date(day.date).toLocaleDateString("en-GB", {
                   weekday: "short",
                   month: "short",
@@ -26,14 +26,14 @@ export default function DaySection({ day, conflicts, sectionRef }: DaySectionPro
                 })}
               </p>
             )}
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] leading-snug">
+            <h3 className="text-lg font-semibold text-text-primary leading-snug">
               {day.title}
             </h3>
           </div>
         </div>
         {day.weather && <WeatherStrip weather={day.weather} />}
         {day.day_summary && (
-          <p className="text-sm text-[var(--text-secondary)] mt-1">{day.day_summary}</p>
+          <p className="text-sm text-text-secondary mt-1">{day.day_summary}</p>
         )}
       </div>
 
@@ -45,18 +45,18 @@ export default function DaySection({ day, conflicts, sectionRef }: DaySectionPro
               role="alert"
               className={`flex items-start gap-3 rounded-lg px-4 py-3 border-l-4 ${
                 conflict.severity === "error"
-                  ? "bg-red-50 border-[var(--danger)]"
-                  : "bg-amber-50 border-[var(--warning)]"
+                  ? "bg-red-50 border-danger"
+                  : "bg-amber-50 border-warning"
               }`}
             >
               <span className="text-base leading-none mt-0.5">
                 {conflict.severity === "error" ? "✕" : "⚠"}
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] mb-0.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-0.5">
                   {conflict.type.replace(/_/g, " ")}
                 </p>
-                <p className="text-sm text-[var(--text-primary)]">{conflict.description}</p>
+                <p className="text-sm text-text-primary">{conflict.description}</p>
               </div>
             </div>
           ))}
