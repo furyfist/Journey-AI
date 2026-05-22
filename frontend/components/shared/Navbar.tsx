@@ -6,7 +6,7 @@ export default function Navbar() {
     <header className="border-b border-border bg-surface">
       <PageWrapper>
         <nav className="flex items-center justify-between h-14">
-          <Link href="/" className="text-lg font-semibold text-text-primary tracking-tight">
+          <Link href="/" className="text-lg font-semibold text-text-primary tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
             Journey AI
           </Link>
           <Link

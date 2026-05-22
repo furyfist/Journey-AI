@@ -58,7 +58,7 @@ export default function RegenerateControl({
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="mt-2 self-start text-xs text-text-muted hover:text-text-secondary transition-colors"
+          className="mt-2 self-start text-xs text-text-muted hover:text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           Regenerate this {SCOPE_LABEL[scope]}
         </button>
@@ -78,7 +78,7 @@ export default function RegenerateControl({
             <button
               onClick={handleGo}
               disabled={loading}
-              className="rounded bg-accent-sage px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded bg-accent-sage px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {loading ? "…" : "Go"}
             </button>
@@ -88,7 +88,7 @@ export default function RegenerateControl({
                 setConstraint("");
               }}
               disabled={loading}
-              className="text-xs text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50"
+              className="text-xs text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
               Cancel
             </button>

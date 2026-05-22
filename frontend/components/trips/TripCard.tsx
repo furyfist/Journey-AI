@@ -22,7 +22,7 @@ function StatusDot({ status }: { status: TripListItem["status"] }) {
   if (status === "generating" || status === "pending") {
     return (
       <span
-        className={`${base} bg-[var(--accent)] animate-pulse`}
+        className={`${base} bg-accent-sage animate-pulse`}
         aria-label={`Status: ${status}`}
       />
     );
@@ -30,7 +30,7 @@ function StatusDot({ status }: { status: TripListItem["status"] }) {
   if (status === "completed") {
     return (
       <span
-        className={`${base} bg-[var(--accent)]`}
+        className={`${base} bg-accent-sage`}
         aria-label="Status: completed"
       />
     );
@@ -45,36 +45,36 @@ function StatusDot({ status }: { status: TripListItem["status"] }) {
 
 export default function TripCard({ trip, onDelete }: TripCardProps) {
   return (
-    <div className="group relative bg-white rounded-lg border border-[var(--border)] p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+    <div className="group relative bg-white rounded-lg border border-border p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <StatusDot status={trip.status} />
-          <h3 className="font-semibold text-[var(--text-primary)] truncate leading-tight">
+          <h3 className="font-semibold text-text-primary truncate leading-tight">
             {trip.title || "Untitled Trip"}
           </h3>
         </div>
       </div>
 
-      <div className="text-sm text-[var(--text-secondary)] space-y-0.5">
+      <div className="text-sm text-text-secondary space-y-0.5">
         <p className="truncate">{trip.destination}</p>
         {trip.total_days && (
-          <p className="text-[var(--text-muted)]">
+          <p className="text-text-muted">
             {trip.total_days} {trip.total_days === 1 ? "day" : "days"}
           </p>
         )}
-        <p className="text-[var(--text-muted)] text-xs">{formatDate(trip.created_at)}</p>
+        <p className="text-text-muted text-xs">{formatDate(trip.created_at)}</p>
       </div>
 
       <div className="mt-auto pt-2 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
         <Link
           href={`/trips/${trip.id}`}
-          className="text-sm font-medium text-[var(--accent)] hover:underline"
+          className="text-sm font-medium text-accent-sage hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           Open
         </Link>
         <button
           onClick={() => onDelete(trip.id)}
-          className="text-sm text-[var(--text-muted)] hover:text-rose-500 transition-colors"
+          className="text-sm text-text-muted hover:text-rose-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           Delete
         </button>
