@@ -223,94 +223,49 @@ class TestSynthesizerAgent:
 
 
 # ---------------------------------------------------------------------------
-# Full pipeline via POST /api/v1/trips
+# POST /api/v1/trips — now creates a pending trip only (no pipeline run)
 # ---------------------------------------------------------------------------
 
-def _wire_db(mock_db: MagicMock, trip: dict) -> None:
-    """Wire all Supabase call chains used by create_trip."""
-    tb = mock_db.table.return_value
-    tb.insert.return_value.execute = AsyncMock(return_value=MagicMock(data=[trip]))
-    tb.update.return_value.eq.return_value.execute = AsyncMock(return_value=MagicMock(data=[trip]))
-    tb.delete.return_value.eq.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
-    tb.select.return_value.eq.return_value.single.return_value.execute = AsyncMock(
-        return_value=MagicMock(data=trip)
-    )
-    tb.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = AsyncMock(
-        return_value=MagicMock(data=[])
-    )
-    tb.select.return_value.limit.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
-
-
-COMPLETED_TRIP = {
+PENDING_TRIP = {
     "id": "00000000-0000-0000-0000-000000000002",
     "prompt": "3-day Tokyo trip, budget street food lover",
     "destination": "Tokyo",
     "budget": "budget",
     "total_days": 3,
-    "title": "Tokyo Street Food & Culture Adventure",
-    "summary": "A great trip overview.",
-    "persona": "Foodie",
-    "status": "completed",
+    "title": "Trip to Tokyo",
+    "summary": None,
+    "persona": None,
+    "status": "pending",
     "travel_dates": None,
     "created_at": "2026-06-01T00:00:00+00:00",
     "updated_at": "2026-06-01T00:00:00+00:00",
 }
 
-FAILED_TRIP = {
-    "id": "00000000-0000-0000-0000-000000000003",
-    "prompt": "A trip somewhere interesting and fun for a week",
-    "destination": "Unknown",
-    "budget": None,
-    "total_days": 5,
-    "title": "Trip to Unknown",
-    "summary": None,
-    "persona": None,
-    "status": "failed",
-    "travel_dates": None,
-    "created_at": "2026-06-01T00:00:00+00:00",
-    "updated_at": "2026-06-01T00:00:00+00:00",
-}
+
+def _wire_db(mock_db: MagicMock, trip: dict) -> None:
+    tb = mock_db.table.return_value
+    tb.insert.return_value.execute = AsyncMock(return_value=MagicMock(data=[trip]))
+    tb.select.return_value.limit.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
 
 
 class TestPlanningEndpointIntegration:
-    def test_create_trip_triggers_pipeline_and_returns_completed(self, client, mock_db):
-        """Successful pipeline run: endpoint returns 201 with completed trip data."""
-        _wire_db(mock_db, COMPLETED_TRIP)
-
-        with patch(
-            "app.planning.service.run_planning_pipeline",
-            new=AsyncMock(return_value=ItinerarySchema.model_validate(MOCK_SYNTHESIZER_JSON)),
-        ):
-            response = client.post(
-                "/api/v1/trips",
-                json={
-                    "prompt": "3-day Tokyo trip, budget street food lover",
-                    "destination": "Tokyo",
-                    "total_days": 3,
-                    "budget": "budget",
-                },
-            )
-
+    def test_create_trip_returns_pending(self, client, mock_db):
+        """POST /trips creates the trip record immediately with status 'pending'."""
+        _wire_db(mock_db, PENDING_TRIP)
+        response = client.post(
+            "/api/v1/trips",
+            json={
+                "prompt": "3-day Tokyo trip, budget street food lover",
+                "destination": "Tokyo",
+                "total_days": 3,
+                "budget": "budget",
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["destination"] == "Tokyo"
-        assert data["status"] == "completed"
-        assert data["persona"] == "Foodie"
+        assert data["status"] == "pending"
 
-    def test_create_trip_pipeline_failure_returns_failed_status(self, client, mock_db):
-        """When the pipeline raises, the endpoint still returns 201 with status 'failed'."""
-        _wire_db(mock_db, FAILED_TRIP)
-
-        from app.core.exceptions import GroqAPIError
-
-        with patch(
-            "app.planning.service.run_planning_pipeline",
-            new=AsyncMock(side_effect=GroqAPIError("Groq down")),
-        ):
-            response = client.post(
-                "/api/v1/trips",
-                json={"prompt": "A trip somewhere interesting and fun for a week"},
-            )
-
-        assert response.status_code == 201
-        assert response.json()["status"] == "failed"
+    def test_create_trip_prompt_too_short_rejected(self, client, mock_db):
+        response = client.post("/api/v1/trips", json={"prompt": "short"})
+        assert response.status_code == 422

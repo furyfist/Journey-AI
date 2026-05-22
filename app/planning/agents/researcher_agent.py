@@ -1,7 +1,9 @@
+from typing import Optional
+
 import httpx
 
 from app.common.logger import get_logger
-from app.planning.agents.base_agent import BaseAgent
+from app.planning.agents.base_agent import BaseAgent, EventCallback
 from app.planning.prompt_builder import researcher_system_prompt, researcher_user_message
 from app.planning.schemas import ResearchBundle
 from app.planning.tools import places_tool, weather_tool
@@ -14,8 +16,8 @@ class ResearcherAgent(BaseAgent):
     name = "researcher"
     tools = RESEARCHER_TOOLS
 
-    def __init__(self, http: httpx.AsyncClient):
-        super().__init__(http)
+    def __init__(self, http: httpx.AsyncClient, on_event: Optional[EventCallback] = None):
+        super().__init__(http, on_event=on_event)
         self._weather: dict | None = None
         self._places: dict[str, list[dict]] = {}
 

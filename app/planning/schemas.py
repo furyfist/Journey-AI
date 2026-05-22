@@ -1,7 +1,34 @@
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+
+# ---------------------------------------------------------------------------
+# SSE event envelope
+# ---------------------------------------------------------------------------
+
+class SSEEvent(BaseModel):
+    """Typed server-sent event sent over the /stream endpoint."""
+
+    event: Literal[
+        "agent_start",
+        "tool_call",
+        "tool_result",
+        "agent_progress",
+        "agent_complete",
+        "conflict_detected",
+        "trip_complete",
+        "error",
+        "keepalive",
+    ]
+    agent: Optional[str] = None
+    data: Optional[Any] = None
+    message: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Conflict
+# ---------------------------------------------------------------------------
 
 class Conflict(BaseModel):
     type: Literal["distance", "timing", "weather", "budget", "persona"]

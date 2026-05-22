@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Awaitable, Callable
 from typing import Any, Optional
 
 import openai
@@ -12,23 +13,33 @@ logger = get_logger(__name__)
 
 _MAX_TOOL_ITERATIONS = 8
 
+# Callback type: receives an SSE-style dict, returns awaitable.
+EventCallback = Callable[[dict], Awaitable[None]]
+
 
 class BaseAgent:
     """
     Shared Groq interaction layer.
     Handles the full tool-call loop: send → get tool_calls → execute → send results → repeat.
     Subclasses implement _execute_tool() and set self.tools.
+
+    Pass on_event to receive granular SSE events during the tool loop.
     """
 
     name: str = "base"
     tools: list[dict] = []
 
-    def __init__(self, http=None):
+    def __init__(self, http=None, on_event: Optional[EventCallback] = None):
         self._http = http
+        self._on_event = on_event
         self._groq = openai.AsyncOpenAI(
             api_key=settings.groq_api_key,
             base_url="https://api.groq.com/openai/v1",
         )
+
+    async def _emit(self, payload: dict) -> None:
+        if self._on_event:
+            await self._on_event(payload)
 
     async def _execute_tool(self, tool_name: str, args: dict) -> Any:
         raise NotImplementedError(f"{self.name} has no handler for tool '{tool_name}'")
@@ -110,11 +121,14 @@ class BaseAgent:
                     args = {}
 
                 logger.info("agent=%s tool=%s args=%s", self.name, tool_name, args)
+                await self._emit({"event": "tool_call", "agent": self.name, "data": {"tool": tool_name, "args": args}})
                 try:
                     result = await self._execute_tool(tool_name, args)
                     content = json.dumps(result, default=str)
+                    await self._emit({"event": "tool_result", "agent": self.name, "data": {"tool": tool_name, "ok": True}})
                 except Exception as exc:
                     content = json.dumps({"error": str(exc)})
+                    await self._emit({"event": "tool_result", "agent": self.name, "data": {"tool": tool_name, "ok": False, "error": str(exc)}})
 
                 messages.append(
                     {
