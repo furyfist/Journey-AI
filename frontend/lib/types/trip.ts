@@ -43,7 +43,7 @@ export interface DayPlan {
   day_number: number;
   date?: string;
   title: string;
-  weather?: string;
+  weather?: { description: string; temperature_max: number; temperature_min: number; precipitation_mm: number; weather_code: number; date?: string } | null;
   morning: TimeBlock;
   afternoon: TimeBlock;
   evening: TimeBlock;

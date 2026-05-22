@@ -10,6 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   if (error.digest) console.error("Error digest:", error.digest);
+  console.error("Error:", error.message, error);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
@@ -19,6 +20,11 @@ export default function Error({
       <p className="text-sm text-text-secondary">
         An unexpected error occurred. Please try again or go back home.
       </p>
+      {process.env.NODE_ENV === "development" && error.message && (
+        <pre className="max-w-lg rounded bg-gray-100 p-3 text-left text-xs text-gray-700 whitespace-pre-wrap">
+          {error.message}
+        </pre>
+      )}
       <div className="flex gap-4">
         <button
           onClick={reset}

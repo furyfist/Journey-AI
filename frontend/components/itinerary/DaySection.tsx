@@ -44,7 +44,7 @@ export default function DaySection({
             </h3>
           </div>
         </div>
-        {day.weather && <WeatherStrip weather={day.weather} />}
+        {day.weather?.description && <WeatherStrip weather={day.weather.description} />}
         {day.day_summary && (
           <p className="mt-1 text-sm text-text-secondary">{day.day_summary}</p>
         )}
