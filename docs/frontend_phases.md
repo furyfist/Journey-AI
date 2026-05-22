@@ -3,6 +3,22 @@
 Each phase has a single, shippable goal. Complete one fully before starting the next.
 Sub-tasks are ordered — earlier ones unblock later ones within the same phase.
 
+
+─────────────────────────────────────────────────────────────
+Commit instructions — IMPORTANT
+─────────────────────────────────────────────────────────────
+
+After each phase commit using ONLY this format — no Co-Authored-By line, no
+mention of Claude or AI:
+
+  git commit -m "$(cat <<'EOF'
+  <message from phase above>
+  EOF
+  )"
+
+Do NOT append "Co-Authored-By: Claude" or any AI attribution. The commit should
+look exactly as if it was written by the repo owner.
+
 ---
 
 ## Phase 1 — Scaffold + Design System
