@@ -7,18 +7,24 @@ import PageWrapper from "@/components/shared/PageWrapper";
 import TripHeader from "@/components/itinerary/TripHeader";
 import DayNav from "@/components/itinerary/DayNav";
 import DaySection from "@/components/itinerary/DaySection";
+import RegenerateControl from "@/components/itinerary/RegenerateControl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrip } from "@/hooks/useTrip";
-import type { Conflict } from "@/lib/types/trip";
+import type { Conflict, TripDetail } from "@/lib/types/trip";
 
 export default function TripDetailPage() {
   const params = useParams<{ tripId: string }>();
   const tripId = params?.tripId ?? "";
 
-  const { trip, itinerary, loading, error } = useTrip(tripId);
+  const { trip, setTrip, itinerary, loading, error } = useTrip(tripId);
 
   const [activeDayNumber, setActiveDayNumber] = useState(1);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const onSuccess = useCallback(
+    (updated: TripDetail) => setTrip(updated),
+    [setTrip],
+  );
 
   useEffect(() => {
     if (!itinerary) return;
@@ -31,11 +37,9 @@ export default function TripDetailPage() {
 
       const observer = new IntersectionObserver(
         ([entry]) => {
-          if (entry.isIntersecting) {
-            setActiveDayNumber(day.day_number);
-          }
+          if (entry.isIntersecting) setActiveDayNumber(day.day_number);
         },
-        { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+        { rootMargin: "-30% 0px -60% 0px", threshold: 0 },
       );
 
       observer.observe(el);
@@ -53,7 +57,7 @@ export default function TripDetailPage() {
   const conflictsForDay = useCallback(
     (dayNumber: number): Conflict[] =>
       (trip?.conflicts ?? []).filter((c) => c.day_number === dayNumber),
-    [trip]
+    [trip],
   );
 
   if (loading) {
@@ -65,7 +69,7 @@ export default function TripDetailPage() {
             <Skeleton className="h-10 w-3/4 rounded" />
             <Skeleton className="h-5 w-1/3 rounded" />
             <Skeleton className="h-4 w-1/4 rounded" />
-            <div className="flex gap-2 mt-2">
+            <div className="mt-2 flex gap-2">
               <Skeleton className="h-6 w-24 rounded-full" />
               <Skeleton className="h-6 w-20 rounded-full" />
             </div>
@@ -81,7 +85,7 @@ export default function TripDetailPage() {
         <Navbar />
         <PageWrapper>
           <div className="py-16 text-center">
-            <p className="text-text-secondary mb-4">Failed to load itinerary.</p>
+            <p className="mb-4 text-text-secondary">Failed to load itinerary.</p>
             <button
               onClick={() => window.location.reload()}
               className="text-sm text-accent-sage underline underline-offset-2"
@@ -117,9 +121,9 @@ export default function TripDetailPage() {
       <PageWrapper>
         <TripHeader trip={trip} itinerary={itinerary} />
 
-        <div className="flex flex-col md:flex-row gap-8 py-4">
+        <div className="flex flex-col gap-8 py-4 md:flex-row">
           {/* Desktop sidebar nav */}
-          <aside className="hidden md:block w-32 shrink-0">
+          <aside className="hidden w-32 shrink-0 md:block">
             <DayNav
               days={itinerary.days}
               activeDayNumber={activeDayNumber}
@@ -128,7 +132,7 @@ export default function TripDetailPage() {
           </aside>
 
           {/* Mobile tab nav */}
-          <div className="md:hidden -mx-4 sm:-mx-6">
+          <div className="-mx-4 sm:-mx-6 md:hidden">
             <DayNav
               days={itinerary.days}
               activeDayNumber={activeDayNumber}
@@ -137,7 +141,7 @@ export default function TripDetailPage() {
           </div>
 
           {/* Day sections */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {itinerary.days.map((day, index) => (
               <DaySection
                 key={day.day_number}
@@ -146,8 +150,18 @@ export default function TripDetailPage() {
                 sectionRef={(el) => {
                   dayRefs.current[index] = el;
                 }}
+                tripId={tripId}
+                onSuccess={onSuccess}
               />
             ))}
+
+            <div className="py-6">
+              <RegenerateControl
+                tripId={tripId}
+                scope="full_trip"
+                onSuccess={onSuccess}
+              />
+            </div>
           </div>
         </div>
       </PageWrapper>
