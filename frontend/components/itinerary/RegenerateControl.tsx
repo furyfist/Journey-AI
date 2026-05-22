@@ -72,7 +72,8 @@ export default function RegenerateControl({
               onKeyDown={(e) => e.key === "Enter" && !loading && handleGo()}
               placeholder="Any changes? e.g. 'avoid museums'"
               disabled={loading}
-              className="min-w-0 flex-1 rounded border border-border bg-white px-3 py-1.5 text-sm placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-sage disabled:opacity-50"
+              style={{ fontSize: "16px" }}
+              className="min-w-0 flex-1 rounded border border-border bg-white px-3 py-1.5 text-sm placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             />
             <button
               onClick={handleGo}
