@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getTrip } from "@/lib/api/trips";
 import type { TripDetail, ItinerarySchema } from "@/lib/types/trip";
 
 interface UseTripResult {
   trip: TripDetail | null;
+  setTrip: React.Dispatch<React.SetStateAction<TripDetail | null>>;
   itinerary: ItinerarySchema | null;
   loading: boolean;
   error: string | null;
@@ -38,5 +39,5 @@ export function useTrip(tripId: string): UseTripResult {
 
   const itinerary = trip?.itinerary ? (trip.itinerary as ItinerarySchema) : null;
 
-  return { trip, itinerary, loading, error };
+  return { trip, setTrip, itinerary, loading, error };
 }
