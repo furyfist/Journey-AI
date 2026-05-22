@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
-
 const MAX_CHARS = 2000;
 
 interface PromptInputProps {
+  value: string;
+  onChange: (v: string) => void;
   onSubmit: (prompt: string) => void;
   loading?: boolean;
   error?: string | null;
 }
 
-export default function PromptInput({ onSubmit, loading = false, error }: PromptInputProps) {
-  const [value, setValue] = useState("");
-
+export default function PromptInput({
+  value,
+  onChange,
+  onSubmit,
+  loading = false,
+  error,
+}: PromptInputProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = value.trim();
@@ -28,7 +32,7 @@ export default function PromptInput({ onSubmit, loading = false, error }: Prompt
       <div className="bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
         <textarea
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           placeholder="Describe your ideal trip... e.g. '7 days in Japan focused on food and culture, mid-range budget'"
           rows={5}
           maxLength={MAX_CHARS}
