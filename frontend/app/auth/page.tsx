@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/trips";
@@ -63,9 +63,10 @@ export default function AuthPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="you@example.com"
               autoComplete="email"
+              style={{ fontSize: "16px" }}
             />
           </div>
 
@@ -79,20 +80,21 @@ export default function AuthPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="••••••••"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
+              style={{ fontSize: "16px" }}
             />
           </div>
 
           {error && (
-            <p className="text-sm text-danger">{error}</p>
+            <p className="text-sm text-danger" role="alert">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-60 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            className="w-full rounded-lg bg-accent-sage py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-60 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {loading
               ? mode === "login"
@@ -111,7 +113,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => { setMode("signup"); setError(null); }}
-                className="text-accent underline-offset-2 hover:underline focus-visible:ring-2"
+                className="text-accent-sage underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
                 Sign up
               </button>
@@ -122,7 +124,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => { setMode("login"); setError(null); }}
-                className="text-accent underline-offset-2 hover:underline focus-visible:ring-2"
+                className="text-accent-sage underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
                 Sign in
               </button>
@@ -131,5 +133,13 @@ export default function AuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <AuthForm />
+    </Suspense>
   );
 }
