@@ -9,12 +9,6 @@ export default function Navbar() {
           <Link href="/" className="text-lg font-semibold text-text-primary tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
             Journey AI
           </Link>
-          <Link
-            href="/auth"
-            className="text-sm text-text-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-          >
-            Sign in
-          </Link>
         </nav>
       </PageWrapper>
     </header>

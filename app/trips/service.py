@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from supabase import AsyncClient
 
@@ -27,8 +26,8 @@ async def create_trip(db: AsyncClient, payload: TripCreate) -> dict:
     return await repository.insert_trip(db, data)
 
 
-async def list_trips(db: AsyncClient, user_id: Optional[str] = None) -> list[dict]:
-    return await repository.fetch_trips(db, user_id)
+async def list_trips(db: AsyncClient) -> list[dict]:
+    return await repository.fetch_trips(db)
 
 
 async def get_trip(db: AsyncClient, trip_id: str) -> dict:

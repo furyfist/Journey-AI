@@ -8,11 +8,13 @@ async def insert_trip(db: AsyncClient, payload: dict) -> dict:
     return result.data[0]
 
 
-async def fetch_trips(db: AsyncClient, user_id: str | None = None) -> list[dict]:
-    query = db.table("trips").select("id, title, destination, total_days, status, created_at")
-    if user_id:
-        query = query.eq("user_id", user_id)
-    result = await query.order("created_at", desc=True).execute()
+async def fetch_trips(db: AsyncClient) -> list[dict]:
+    result = (
+        await db.table("trips")
+        .select("id, title, destination, total_days, status, created_at")
+        .order("created_at", desc=True)
+        .execute()
+    )
     return result.data
 
 

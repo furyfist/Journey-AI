@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabase/client";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -18,19 +16,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const authHeader: Record<string, string> =
-    session?.access_token
-      ? { Authorization: `Bearer ${session.access_token}` }
-      : {};
-
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      ...authHeader,
       ...(init?.headers ?? {}),
     },
     ...init,
