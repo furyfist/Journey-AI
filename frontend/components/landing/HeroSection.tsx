@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, PlayCircle } from "lucide-react";
 import PageWrapper from "@/components/shared/PageWrapper";
 import VideoModal from "@/components/shared/VideoModal";
+import PromptInput from "@/components/landing/PromptInput";
+import ExampleChips from "@/components/landing/ExampleChips";
+import { createTrip } from "@/lib/api/trips";
+import { useGenerateStore } from "@/store/generate";
 
 const DEMO_ACTIVITIES = [
   { time: "9:00 AM", name: "Tsukiji Outer Market", tag: "Food", tagColor: "bg-orange-50 text-orange-600" },
@@ -12,13 +17,43 @@ const DEMO_ACTIVITIES = [
 ];
 
 export default function HeroSection() {
+  const router = useRouter();
+  const setStorePrompt = useGenerateStore((s) => s.setPrompt);
   const [showModal, setShowModal] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handlePromptChange(v: string) {
+    setPrompt(v);
+    if (error) setError(null);
+  }
+
+  async function handleSubmit(value: string) {
+    setError(null);
+    setLoading(true);
+    try {
+      const trip = await createTrip({ prompt: value });
+      setStorePrompt(value);
+      router.push(`/generate/${trip.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleExampleSelect(example: string) {
+    setPrompt(example);
+    if (error) setError(null);
+  }
 
   return (
     <>
-      <section className="min-h-[85vh] flex items-center py-16 sm:py-20 overflow-hidden">
+      <section className="py-16 sm:py-20 overflow-hidden">
         <PageWrapper>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Two-column hero */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center min-h-[55vh]">
             {/* Left column */}
             <div className="space-y-7">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand-blue/30 bg-blue-50 text-brand-blue text-xs font-medium">
@@ -77,8 +112,7 @@ export default function HeroSection() {
             {/* Right column — demo trip preview card */}
             <div className="relative">
               <div className="absolute -inset-6 bg-blue-50/40 rounded-3xl blur-sm" />
-              <div id="prompt" className="relative bg-surface shadow-xl rounded-2xl border border-border overflow-hidden">
-                {/* Card header */}
+              <div className="relative bg-surface shadow-xl rounded-2xl border border-border overflow-hidden">
                 <div className="px-6 pt-5 pb-4 border-b border-border">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-text-primary">Your Trip to Tokyo</span>
@@ -93,14 +127,12 @@ export default function HeroSection() {
                   </div>
                 </div>
 
-                {/* Image thumbnails */}
                 <div className="px-6 py-4 flex gap-3">
                   <div className="flex-1 aspect-video bg-muted rounded-lg" />
                   <div className="flex-1 aspect-video bg-muted rounded-lg" />
                   <div className="flex-1 aspect-video bg-muted rounded-lg" />
                 </div>
 
-                {/* Activities */}
                 <div className="px-6 pb-4 space-y-2.5">
                   {DEMO_ACTIVITIES.map(({ time, name, tag, tagColor }) => (
                     <div key={time} className="flex items-center gap-3">
@@ -113,7 +145,6 @@ export default function HeroSection() {
                   ))}
                 </div>
 
-                {/* CTA */}
                 <div className="px-6 pb-6">
                   <a
                     href="#prompt"
@@ -122,6 +153,23 @@ export default function HeroSection() {
                     Plan My Trip →
                   </a>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Prompt input — scroll target for all CTAs */}
+          <div id="prompt" className="mt-16 max-w-2xl mx-auto">
+            <p className="text-center text-sm text-text-muted mb-4">Where do you want to go?</p>
+            <div className="bg-surface shadow-xl rounded-2xl border border-border p-6">
+              <PromptInput
+                value={prompt}
+                onChange={handlePromptChange}
+                onSubmit={handleSubmit}
+                loading={loading}
+                error={error}
+              />
+              <div className="mt-3">
+                <ExampleChips onSelect={handleExampleSelect} />
               </div>
             </div>
           </div>
