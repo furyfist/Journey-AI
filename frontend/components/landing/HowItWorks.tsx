@@ -37,8 +37,8 @@ export default function HowItWorks() {
           {STEPS.map(({ icon: Icon, step, title, description }) => (
             <div key={step} className="flex flex-col items-center text-center gap-4">
               <div className="relative">
-                <div className="h-14 w-14 rounded-2xl bg-accent-light flex items-center justify-center">
-                  <Icon size={24} className="text-accent-sage" />
+                <div className="h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <Icon size={24} className="text-brand-blue" />
                 </div>
                 <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-brand-blue flex items-center justify-center text-white text-[10px] font-bold">
                   {step.slice(1)}

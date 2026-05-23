@@ -20,7 +20,7 @@ export default function ExampleChips({ onSelect }: ExampleChipsProps) {
           key={ex}
           type="button"
           onClick={() => onSelect(ex)}
-          className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-text-secondary whitespace-nowrap transition-colors hover:border-primary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-text-secondary whitespace-nowrap transition-colors hover:border-brand-blue hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
         >
           {ex}
         </button>

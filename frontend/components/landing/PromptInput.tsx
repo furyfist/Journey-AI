@@ -53,7 +53,7 @@ export default function PromptInput({
           <button
             type="submit"
             disabled={loading || !value.trim() || overLimit}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-blue px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue disabled:pointer-events-none disabled:opacity-50"
           >
             {loading && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
