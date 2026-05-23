@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SSEEvent, SSEEventType } from "@/lib/types/planning";
 
 export type StreamStatus = "connecting" | "streaming" | "complete" | "error";
@@ -35,9 +35,13 @@ export function useSSEStream(tripId: string): UseSSEStreamResult {
   const [isComplete, setIsComplete] = useState(false);
   const [completedTripId, setCompletedTripId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Ref to avoid stale closure in onerror — tracks whether trip_complete was received.
+  const tripCompleteReceived = useRef(false);
 
   useEffect(() => {
     if (!tripId) return;
+
+    tripCompleteReceived.current = false;
 
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     const url = `${apiBase}/api/v1/trips/${tripId}/stream`;
@@ -67,10 +71,11 @@ export function useSSEStream(tripId: string): UseSSEStreamResult {
           setActiveAgent(null);
           break;
         case "trip_complete":
+          tripCompleteReceived.current = true;
           setIsComplete(true);
           setStatus("complete");
           setCompletedTripId((parsed.data?.trip_id as string) ?? tripId);
-          es.close();
+          // Do NOT close — critic still runs after trip_complete in the same stream.
           break;
         case "error":
           setError(parsed.message ?? "An error occurred");
@@ -83,9 +88,13 @@ export function useSSEStream(tripId: string): UseSSEStreamResult {
     ALL_EVENT_TYPES.forEach((type) => es.addEventListener(type, handleEvent));
 
     es.onerror = () => {
-      setError("Connection lost");
-      setStatus("error");
       es.close();
+      // If trip_complete was already received, onerror = server closed the stream naturally.
+      // Don't clobber the complete state with an error.
+      if (!tripCompleteReceived.current) {
+        setError("Connection lost");
+        setStatus("error");
+      }
     };
 
     return () => {
