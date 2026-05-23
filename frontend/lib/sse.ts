@@ -14,7 +14,6 @@ export const SSE_EVENTS: Record<SSEEventType, SSEEventType> = {
 
 export const AGENT_ORDER = [
   "researcher",
-  "planner",
   "synthesizer",
   "conflict_checker",
   "critic",

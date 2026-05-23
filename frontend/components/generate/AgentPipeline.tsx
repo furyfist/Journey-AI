@@ -9,7 +9,6 @@ interface AgentPipelineProps {
 
 const AGENT_LABELS: Record<string, string> = {
   researcher: "Researcher",
-  planner: "Planner",
   synthesizer: "Synthesizer",
   conflict_checker: "Conflict Checker",
   critic: "Critic",

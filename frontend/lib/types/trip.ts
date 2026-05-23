@@ -3,6 +3,10 @@ export interface TripCreate {
   destination?: string;
   budget?: string;
   total_days?: number;
+  persona_hint?: string;
+  interests?: string[];
+  constraints?: string[];
+  travel_party?: string;
 }
 
 export interface TripResponse {

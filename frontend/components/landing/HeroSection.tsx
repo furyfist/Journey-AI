@@ -7,8 +7,10 @@ import PageWrapper from "@/components/shared/PageWrapper";
 import VideoModal from "@/components/shared/VideoModal";
 import PromptInput from "@/components/landing/PromptInput";
 import ExampleChips from "@/components/landing/ExampleChips";
+import TripDetailsForm from "@/components/landing/TripDetailsForm";
 import { createTrip } from "@/lib/api/trips";
 import { useGenerateStore } from "@/store/generate";
+import type { TripCreate } from "@/lib/types/trip";
 
 const DEMO_ACTIVITIES = [
   { time: "9:00 AM", name: "Tsukiji Outer Market", tag: "Food", tagColor: "bg-orange-50 text-orange-600" },
@@ -16,10 +18,13 @@ const DEMO_ACTIVITIES = [
   { time: "2:00 PM", name: "Senso-ji Temple", tag: "Culture", tagColor: "bg-blue-50 text-blue-600" },
 ];
 
+type Step = "prompt" | "details";
+
 export default function HeroSection() {
   const router = useRouter();
   const setStorePrompt = useGenerateStore((s) => s.setPrompt);
   const [showModal, setShowModal] = useState(false);
+  const [step, setStep] = useState<Step>("prompt");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +34,18 @@ export default function HeroSection() {
     if (error) setError(null);
   }
 
-  async function handleSubmit(value: string) {
+  function handlePromptSubmit(value: string) {
+    setPrompt(value);
+    setError(null);
+    setStep("details");
+  }
+
+  async function handleDetailsSubmit(payload: TripCreate) {
     setError(null);
     setLoading(true);
     try {
-      const trip = await createTrip({ prompt: value });
-      setStorePrompt(value);
+      const trip = await createTrip(payload);
+      setStorePrompt(payload.prompt);
       router.push(`/generate/${trip.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -157,20 +168,34 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Prompt input — scroll target for all CTAs */}
+          {/* Prompt input / details form — scroll target for all CTAs */}
           <div id="prompt" className="mt-16 max-w-2xl mx-auto">
-            <p className="text-center text-sm text-text-muted mb-4">Where do you want to go?</p>
+            <p className="text-center text-sm text-text-muted mb-4">
+              {step === "prompt" ? "Where do you want to go?" : "Almost there — a few more details"}
+            </p>
             <div className="bg-surface shadow-xl rounded-2xl border border-border p-6">
-              <PromptInput
-                value={prompt}
-                onChange={handlePromptChange}
-                onSubmit={handleSubmit}
-                loading={loading}
-                error={error}
-              />
-              <div className="mt-3">
-                <ExampleChips onSelect={handleExampleSelect} />
-              </div>
+              {step === "prompt" ? (
+                <>
+                  <PromptInput
+                    value={prompt}
+                    onChange={handlePromptChange}
+                    onSubmit={handlePromptSubmit}
+                    loading={loading}
+                    error={error}
+                  />
+                  <div className="mt-3">
+                    <ExampleChips onSelect={handleExampleSelect} />
+                  </div>
+                </>
+              ) : (
+                <TripDetailsForm
+                  prompt={prompt}
+                  onBack={() => { setStep("prompt"); setError(null); }}
+                  onSubmit={handleDetailsSubmit}
+                  loading={loading}
+                  error={error}
+                />
+              )}
             </div>
           </div>
         </PageWrapper>
