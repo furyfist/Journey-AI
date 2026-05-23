@@ -7,9 +7,9 @@ from supabase import AsyncClient
 from app.common.logger import get_logger
 from app.planning.agents.critic_agent import CriticAgent
 from app.planning.agents.planner_agent import PlannerAgent
-from app.planning.agents.researcher_agent import ResearcherAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
 from app.planning.conflict_checker import run_conflict_checks
+from app.planning.research_fetcher import fetch_research
 from app.planning.schemas import Conflict, ItinerarySchema, ResearchBundle
 from app.trips import repository as trip_repo
 
@@ -35,13 +35,17 @@ async def run_planning_pipeline(
 
     try:
         logger.info("trip=%s step=researcher", trip_id)
-        researcher = ResearcherAgent(http)
-        research: ResearchBundle = await researcher.run_research(
-            prompt=prompt,
+        research: ResearchBundle = await fetch_research(
+            http=http,
             destination=destination,
             total_days=total_days,
             start_date=start_date,
             budget=budget,
+            interests=interests,
+            prompt=prompt,
+            persona_hint=persona_hint,
+            constraints=constraints,
+            travel_party=travel_party,
         )
 
         logger.info("trip=%s step=planner", trip_id)

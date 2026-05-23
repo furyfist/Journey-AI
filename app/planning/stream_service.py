@@ -16,9 +16,9 @@ from supabase import AsyncClient
 from app.common.logger import get_logger
 from app.planning.agents.critic_agent import CriticAgent
 from app.planning.agents.planner_agent import PlannerAgent
-from app.planning.agents.researcher_agent import ResearcherAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
 from app.planning.conflict_checker import run_conflict_checks
+from app.planning.research_fetcher import fetch_research
 from app.planning.schemas import Conflict, ItinerarySchema, ResearchBundle, SSEEvent
 from app.trips import repository as trip_repo
 
@@ -70,15 +70,20 @@ async def stream_planning_pipeline(
     keepalive_task = asyncio.create_task(keepalive_loop(stop_keepalive))
 
     try:
-        # ------------------------------------------------------------------ researcher
+        # ------------------------------------------------------------------ researcher (direct HTTP, 0 Groq calls)
         yield SSEEvent(event="agent_start", agent="researcher", message="Gathering weather and places data")
-        researcher = ResearcherAgent(http, on_event=on_event)
-        research: ResearchBundle = await researcher.run_research(
-            prompt=prompt, destination=destination, total_days=total_days,
-            start_date=start_date, budget=budget,
+        research: ResearchBundle = await fetch_research(
+            http=http,
+            destination=destination,
+            total_days=total_days,
+            start_date=start_date,
+            budget=budget,
+            interests=interests,
+            prompt=prompt,
+            persona_hint=persona_hint,
+            constraints=constraints,
+            travel_party=travel_party,
         )
-        async for ev in drain():
-            yield ev
         yield SSEEvent(event="agent_complete", agent="researcher", message="Research complete")
 
         # ------------------------------------------------------------------ planner
