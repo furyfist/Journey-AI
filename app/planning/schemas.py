@@ -91,3 +91,7 @@ class ResearchBundle(BaseModel):
     budget: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    persona_hint: Optional[str] = None
+    interests: Optional[list[str]] = None
+    constraints: Optional[list[str]] = None
+    travel_party: Optional[str] = None

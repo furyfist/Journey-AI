@@ -48,6 +48,10 @@ async def stream_trip(trip_id: UUID, db: DBDep, http: HttpDep):
             total_days=trip.get("total_days", 5),
             start_date=start_date,
             budget=trip.get("budget"),
+            persona_hint=trip.get("persona_hint"),
+            interests=trip.get("interests") or [],
+            constraints=trip.get("constraints") or [],
+            travel_party=trip.get("travel_party"),
         ):
             yield {
                 "event": event.event,

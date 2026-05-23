@@ -22,6 +22,10 @@ async def create_trip(db: AsyncClient, payload: TripCreate) -> dict:
         "total_days": payload.total_days or 5,
         "title": f"Trip to {destination}",
         "status": "pending",
+        "persona_hint": payload.persona_hint,
+        "interests": payload.interests or [],
+        "constraints": payload.constraints or [],
+        "travel_party": payload.travel_party,
     }
     return await repository.insert_trip(db, data)
 

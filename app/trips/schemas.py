@@ -12,6 +12,10 @@ class TripCreate(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     total_days: Optional[int] = Field(default=None, ge=1, le=30)
+    persona_hint: Optional[str] = None
+    interests: Optional[list[str]] = None
+    constraints: Optional[list[str]] = None
+    travel_party: Optional[str] = None
 
 
 class TripResponse(BaseModel):

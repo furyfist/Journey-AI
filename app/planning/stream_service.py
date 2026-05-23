@@ -36,6 +36,10 @@ async def stream_planning_pipeline(
     total_days: int,
     start_date: Optional[str] = None,
     budget: Optional[str] = None,
+    persona_hint: Optional[str] = None,
+    interests: Optional[list[str]] = None,
+    constraints: Optional[list[str]] = None,
+    travel_party: Optional[str] = None,
 ) -> AsyncGenerator[SSEEvent, None]:
     """
     Async generator — yield SSEEvent objects as each pipeline stage progresses.

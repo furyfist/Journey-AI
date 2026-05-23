@@ -25,6 +25,10 @@ async def run_planning_pipeline(
     total_days: int,
     start_date: Optional[str] = None,
     budget: Optional[str] = None,
+    persona_hint: Optional[str] = None,
+    interests: Optional[list[str]] = None,
+    constraints: Optional[list[str]] = None,
+    travel_party: Optional[str] = None,
 ) -> ItinerarySchema:
     """Researcher → Planner → Synthesizer → Critic. Saves results to DB. Raises on failure."""
     await trip_repo.update_trip_status(db, trip_id, "generating")
