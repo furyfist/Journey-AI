@@ -15,7 +15,6 @@ from supabase import AsyncClient
 
 from app.common.logger import get_logger
 from app.planning.agents.critic_agent import CriticAgent
-from app.planning.agents.planner_agent import PlannerAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
 from app.planning.conflict_checker import run_conflict_checks
 from app.planning.research_fetcher import fetch_research
@@ -86,18 +85,17 @@ async def stream_planning_pipeline(
         )
         yield SSEEvent(event="agent_complete", agent="researcher", message="Research complete")
 
-        # ------------------------------------------------------------------ planner
-        yield SSEEvent(event="agent_start", agent="planner", message="Building day-by-day schedule")
-        planner = PlannerAgent(http, on_event=on_event)
-        rough_plan: dict = await planner.run_planning(prompt, research)
-        async for ev in drain():
-            yield ev
-        yield SSEEvent(event="agent_complete", agent="planner", message="Day structure ready")
-
-        # ------------------------------------------------------------------ synthesizer
+        # ------------------------------------------------------------------ synthesizer (absorbs planner)
         yield SSEEvent(event="agent_start", agent="synthesizer", message="Generating full itinerary")
         synthesizer = SynthesizerAgent(http, on_event=on_event)
-        itinerary: ItinerarySchema = await synthesizer.run_synthesis(prompt, research, rough_plan)
+        itinerary: ItinerarySchema = await synthesizer.run_synthesis(
+            prompt=prompt,
+            research=research,
+            persona_hint=persona_hint,
+            interests=interests,
+            constraints=constraints,
+            travel_party=travel_party,
+        )
         async for ev in drain():
             yield ev
         yield SSEEvent(event="agent_complete", agent="synthesizer", message="Itinerary generated")
@@ -122,7 +120,7 @@ async def stream_planning_pipeline(
         all_conflicts: list[Conflict] = pre_conflicts + llm_conflicts
         await _persist(
             db, trip_id, itinerary, research,
-            rough_plan.get("persona", itinerary.persona),
+            itinerary.persona,
             all_conflicts,
         )
 

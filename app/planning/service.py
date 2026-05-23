@@ -6,7 +6,6 @@ from supabase import AsyncClient
 
 from app.common.logger import get_logger
 from app.planning.agents.critic_agent import CriticAgent
-from app.planning.agents.planner_agent import PlannerAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
 from app.planning.conflict_checker import run_conflict_checks
 from app.planning.research_fetcher import fetch_research
@@ -48,13 +47,16 @@ async def run_planning_pipeline(
             travel_party=travel_party,
         )
 
-        logger.info("trip=%s step=planner", trip_id)
-        planner = PlannerAgent(http)
-        rough_plan: dict = await planner.run_planning(prompt, research)
-
         logger.info("trip=%s step=synthesizer", trip_id)
         synthesizer = SynthesizerAgent(http)
-        itinerary: ItinerarySchema = await synthesizer.run_synthesis(prompt, research, rough_plan)
+        itinerary: ItinerarySchema = await synthesizer.run_synthesis(
+            prompt=prompt,
+            research=research,
+            persona_hint=persona_hint,
+            interests=interests,
+            constraints=constraints,
+            travel_party=travel_party,
+        )
 
         logger.info("trip=%s step=conflict_check", trip_id)
         pre_conflicts = run_conflict_checks(itinerary)
@@ -68,7 +70,7 @@ async def run_planning_pipeline(
 
         await _persist(
             db, trip_id, itinerary, research,
-            rough_plan.get("persona", itinerary.persona),
+            itinerary.persona,
             all_conflicts,
         )
         return itinerary

@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 from pydantic import ValidationError
 
@@ -15,10 +16,23 @@ class SynthesizerAgent(BaseAgent):
     name = "synthesizer"
 
     async def run_synthesis(
-        self, prompt: str, research: ResearchBundle, rough_plan: dict
+        self,
+        prompt: str,
+        research: ResearchBundle,
+        persona_hint: Optional[str] = None,
+        interests: Optional[list[str]] = None,
+        constraints: Optional[list[str]] = None,
+        travel_party: Optional[str] = None,
     ) -> ItinerarySchema:
-        """Convert rough plan + research into a fully validated ItinerarySchema."""
-        user_msg = synthesizer_user_message(prompt, research, rough_plan)
+        """Plan and convert research into a fully validated ItinerarySchema (absorbs planner)."""
+        user_msg = synthesizer_user_message(
+            prompt=prompt,
+            research=research,
+            persona_hint=persona_hint or research.persona_hint,
+            interests=interests or research.interests,
+            constraints=constraints or research.constraints,
+            travel_party=travel_party or research.travel_party,
+        )
         raw = await self.run(
             user_message=user_msg,
             system_prompt=synthesizer_system_prompt(),
@@ -32,4 +46,5 @@ class SynthesizerAgent(BaseAgent):
         try:
             return ItinerarySchema.model_validate(data)
         except ValidationError as exc:
+            logger.warning("SchemaValidationError rate check — synthesizer validation failed: %s", exc)
             raise SchemaValidationError(f"Itinerary failed schema validation: {exc}") from exc

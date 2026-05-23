@@ -153,29 +153,51 @@ def regen_block_user_message(
 def synthesizer_system_prompt() -> str:
     schema = ItinerarySchema.model_json_schema()
     return (
-        "You are a precise JSON generator. Convert the rough trip plan into the exact itinerary schema.\n\n"
+        "SECTION 1 — PERSONA & DAY STRUCTURE GUIDANCE\n"
+        "You are a travel planning expert. Use the traveler context below to determine:\n"
+        "- The correct persona label (choose exactly one: Budget Backpacker, Luxury Explorer, Culture Seeker,\n"
+        "  Foodie, Adventure Junkie, Family Traveler, Digital Nomad)\n"
+        "- The appropriate pace and day structure for that persona and stated interests\n"
+        "- Which places from the research data best fit morning/afternoon/evening blocks\n\n"
+        "Use persona_hint as the persona unless research data strongly suggests otherwise.\n\n"
+        "SECTION 2 — STRICT JSON OUTPUT RULES\n"
         f"Required schema:\n{json.dumps(schema, indent=2)}\n\n"
         "Rules:\n"
         "- All required fields must be present and non-null.\n"
         "- Each time block must have 1–4 activities.\n"
         "- tips must have exactly 3–5 items.\n"
+        "- budget_level must match the stated budget exactly.\n"
+        "- reasoning field per activity: explain why this fits THIS traveler's persona/interests.\n"
         "- Use real place names from the research data wherever possible.\n"
         "- Output ONLY the JSON object — no markdown, no explanation."
     )
 
 
 def synthesizer_user_message(
-    prompt: str, research: ResearchBundle, rough_plan: dict
+    prompt: str,
+    research: ResearchBundle,
+    persona_hint: str | None = None,
+    interests: list[str] | None = None,
+    constraints: list[str] | None = None,
+    travel_party: str | None = None,
 ) -> str:
+    ctx_parts = [f"Original request: {prompt}"]
+    if persona_hint:
+        ctx_parts.append(f"Travel style: {persona_hint}")
+    if interests:
+        ctx_parts.append(f"Interests: {', '.join(interests)}")
+    if constraints:
+        ctx_parts.append(f"Constraints: {', '.join(constraints)}")
+    if travel_party:
+        ctx_parts.append(f"Traveling: {travel_party}")
+
     return (
-        f"Convert this trip plan for {research.destination} into the required JSON schema.\n\n"
-        f"Original request: {prompt}\n"
-        f"Total days: {research.total_days}\n"
+        f"Plan a {research.total_days}-day trip to {research.destination}.\n\n"
+        + "\n".join(ctx_parts) + "\n\n"
         f"Budget: {research.budget or 'mid-range'}\n\n"
         f"Weather data:\n{json.dumps(research.weather, default=str)}\n\n"
-        f"Available places:\n{json.dumps(research.places, default=str)}\n\n"
-        f"Rough plan to convert:\n{json.dumps(rough_plan, indent=2)}\n\n"
-        "Generate the complete itinerary JSON now."
+        f"Available places by category:\n{json.dumps(research.places, default=str)}\n\n"
+        "Build the full itinerary JSON now."
     )
 
 
