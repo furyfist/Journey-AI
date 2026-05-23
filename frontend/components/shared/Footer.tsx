@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Twitter, Instagram, Github } from "lucide-react";
+import { Send, Camera, Code2 } from "lucide-react";
 import PageWrapper from "./PageWrapper";
 
 const LINKS = [
@@ -66,13 +66,13 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <a href="#" className="text-text-muted hover:text-text-primary transition-colors" aria-label="Twitter">
-              <Twitter size={18} />
+              <Send size={18} />
             </a>
             <a href="#" className="text-text-muted hover:text-text-primary transition-colors" aria-label="Instagram">
-              <Instagram size={18} />
+              <Camera size={18} />
             </a>
             <a href="#" className="text-text-muted hover:text-text-primary transition-colors" aria-label="GitHub">
-              <Github size={18} />
+              <Code2 size={18} />
             </a>
           </div>
         </div>
