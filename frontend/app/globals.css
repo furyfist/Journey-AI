@@ -60,6 +60,10 @@
 
   /* Shadow token */
   --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  /* Brand blue tokens */
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-dark: var(--brand-blue-dark);
 }
 
 :root {
@@ -74,6 +78,8 @@
   --text-muted: #A8A8A8;
   --warning: #F5A623;
   --danger: #E07070;
+  --brand-blue: #3B82F6;
+  --brand-blue-dark: #2563EB;
 
   /* shadcn semantic tokens — mapped to Journey AI palette */
   --foreground: var(--text-primary);
@@ -123,6 +129,10 @@
 
 .animate-log-in {
   animation: log-in 80ms ease-out;
+}
+
+.bg-gradient-brand {
+  background-image: linear-gradient(to right, var(--brand-blue), var(--brand-blue-dark));
 }
 
 /* Hide scrollbars while keeping scroll functionality */
