@@ -100,39 +100,37 @@ async def stream_planning_pipeline(
             yield ev
         yield SSEEvent(event="agent_complete", agent="synthesizer", message="Itinerary generated")
 
-        # ------------------------------------------------------------------ conflict detection
+        # ------------------------------------------------------------------ conflict detection (deterministic)
         yield SSEEvent(event="agent_start", agent="conflict_checker", message="Running conflict checks")
         pre_conflicts = run_conflict_checks(itinerary)
         for c in pre_conflicts:
             yield SSEEvent(event="conflict_detected", agent="conflict_checker", data=c.model_dump())
 
-        # ------------------------------------------------------------------ critic
-        yield SSEEvent(event="agent_start", agent="critic", message="LLM quality review")
+        # ------------------------------------------------------------------ persist initial + trip_complete
+        itinerary_id = await _persist_initial(db, trip_id, itinerary, research, itinerary.persona, pre_conflicts)
+
+        yield SSEEvent(
+            event="trip_complete",
+            data={
+                "trip_id": trip_id,
+                "total_conflicts": len(pre_conflicts),
+                "destination": itinerary.destination,
+                "title": itinerary.title,
+            },
+        )
+
+        # ------------------------------------------------------------------ critic (runs after user sees itinerary)
+        yield SSEEvent(event="agent_start", agent="critic", message="Running quality review")
         critic = CriticAgent(http, on_event=on_event)
         llm_conflicts = await critic.run_critique(itinerary, pre_conflicts, research)
         async for ev in drain():
             yield ev
         for c in llm_conflicts:
             yield SSEEvent(event="conflict_detected", agent="critic", data=c.model_dump())
-        yield SSEEvent(event="agent_complete", agent="critic", message=f"{len(llm_conflicts)} LLM conflict(s) found")
+        yield SSEEvent(event="agent_complete", agent="critic", message=f"{len(llm_conflicts)} issue(s) found")
 
-        # ------------------------------------------------------------------ persist
-        all_conflicts: list[Conflict] = pre_conflicts + llm_conflicts
-        await _persist(
-            db, trip_id, itinerary, research,
-            itinerary.persona,
-            all_conflicts,
-        )
-
-        yield SSEEvent(
-            event="trip_complete",
-            data={
-                "trip_id": trip_id,
-                "total_conflicts": len(all_conflicts),
-                "destination": itinerary.destination,
-                "title": itinerary.title,
-            },
-        )
+        # ------------------------------------------------------------------ persist critic conflicts
+        await _persist_conflicts(db, itinerary_id, llm_conflicts)
 
     except Exception as exc:
         logger.error("trip=%s stream pipeline failed: %s", trip_id, exc)
@@ -148,14 +146,15 @@ async def stream_planning_pipeline(
             pass
 
 
-async def _persist(
+async def _persist_initial(
     db: AsyncClient,
     trip_id: str,
     itinerary: ItinerarySchema,
     research: ResearchBundle,
     persona: str,
-    conflicts: list[Conflict],
-) -> None:
+    pre_conflicts: list[Conflict],
+) -> str:
+    """Persist trip + itinerary with deterministic conflicts only. Returns itinerary_id."""
     import uuid
 
     await db.table("trips").update(
@@ -184,16 +183,33 @@ async def _persist(
     else:
         next_version = 1
 
+    itinerary_id = str(uuid.uuid4())
     await db.table("itineraries").insert(
         {
-            "id": str(uuid.uuid4()),
+            "id": itinerary_id,
             "trip_id": trip_id,
             "version": next_version,
             "itinerary_data": itinerary.model_dump(),
             "weather_data": research.weather,
             "places_data": research.places,
-            "conflicts": [c.model_dump() for c in conflicts],
+            "conflicts": [c.model_dump() for c in pre_conflicts],
             "reasoning": {},
             "is_active": True,
         }
     ).execute()
+
+    return itinerary_id
+
+
+async def _persist_conflicts(
+    db: AsyncClient,
+    itinerary_id: str,
+    llm_conflicts: list[Conflict],
+) -> None:
+    """Append LLM critic conflicts to the itinerary row after trip_complete."""
+    if not llm_conflicts:
+        return
+    existing = await db.table("itineraries").select("conflicts").eq("id", itinerary_id).single().execute()
+    current: list[dict] = existing.data.get("conflicts", []) if existing.data else []
+    updated = current + [c.model_dump() for c in llm_conflicts]
+    await db.table("itineraries").update({"conflicts": updated}).eq("id", itinerary_id).execute()
