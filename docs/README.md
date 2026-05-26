@@ -4,7 +4,8 @@ This folder is organized so it is easier to tell what is current, what was imple
 
 ## Start Here
 
-- Current source of truth: [overview/PROJECT_OVERVIEW.md](overview/PROJECT_OVERVIEW.md)
+- Current architecture reference: [overview/PROJECT_OVERVIEW.md](overview/PROJECT_OVERVIEW.md)
+- Current progress snapshot: [overview/PROJECT_PROGRESS_VERSION_2.md](overview/PROJECT_PROGRESS_VERSION_2.md)
 - Active planning work: [plans/active](plans/active)
 - Implemented change notes: [implementation](implementation)
 - Historical or superseded plans: [plans/archive](plans/archive)
@@ -15,7 +16,8 @@ This folder is organized so it is easier to tell what is current, what was imple
 
 High-signal reference docs that describe the current project state.
 
-- `PROJECT_OVERVIEW.md`: best single-file project snapshot
+- `PROJECT_OVERVIEW.md`: architecture and system reference
+- `PROJECT_PROGRESS_VERSION_2.md`: latest detailed progress/status snapshot
 
 ### `plans/active/`
 
