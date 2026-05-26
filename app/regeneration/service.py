@@ -14,11 +14,9 @@ from supabase import AsyncClient
 from app.common.logger import get_logger
 from app.core.exceptions import TripNotFoundError
 from app.planning.agents.critic_agent import CriticAgent
-from app.planning.agents.planner_agent import PlannerAgent
 from app.planning.agents.regeneration_agent import BlockRegenerationAgent, DayRegenerationAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
 from app.planning.conflict_checker import run_conflict_checks
-from app.planning.prompt_builder import regen_full_user_message
 from app.planning.schemas import Conflict, DayPlan, ItinerarySchema, ResearchBundle, TimeBlock
 from app.regeneration import repository as regen_repo
 from app.regeneration.schemas import RegenerateRequest, RegenerateScope
@@ -47,14 +45,7 @@ async def regenerate_trip(
     current_version: int = itinerary_row.get("version", 1)
 
     # Restore ResearchBundle from cached data — no new API calls.
-    research = ResearchBundle(
-        destination=trip["destination"],
-        prompt=trip["prompt"],
-        total_days=trip.get("total_days", 5),
-        weather=itinerary_row.get("weather_data"),
-        places=itinerary_row.get("places_data") or {},
-        budget=trip.get("budget"),
-    )
+    research = _build_research_bundle(trip, itinerary_row)
 
     logger.info("trip=%s scope=%s version=%d→%d", trip_id, request.scope, current_version, current_version + 1)
 
@@ -99,16 +90,42 @@ async def _regen_full(
     research: ResearchBundle,
     constraint: str | None,
 ) -> ItinerarySchema:
-    """Re-run planner + synthesizer with cached research + optional constraint."""
-    planner = PlannerAgent(http)
+    """Re-run the current synthesizer-only pipeline with cached research."""
     augmented_prompt = trip["prompt"]
     if constraint:
         augmented_prompt = f"{augmented_prompt}. Additional constraint: {constraint}"
 
-    rough_plan: dict = await planner.run_planning(augmented_prompt, research)
-
     synthesizer = SynthesizerAgent(http)
-    return await synthesizer.run_synthesis(augmented_prompt, research, rough_plan)
+    return await synthesizer.run_synthesis(
+        augmented_prompt,
+        research,
+        persona_hint=research.persona_hint,
+        interests=research.interests,
+        constraints=research.constraints,
+        travel_party=research.travel_party,
+    )
+
+
+def _build_research_bundle(trip: dict, itinerary_row: dict) -> ResearchBundle:
+    """Restore the structured context needed for regeneration from persisted trip data."""
+    travel_dates = trip.get("travel_dates") or {}
+    start_date = travel_dates.get("start") if isinstance(travel_dates, dict) else None
+    end_date = travel_dates.get("end") if isinstance(travel_dates, dict) else None
+
+    return ResearchBundle(
+        destination=trip["destination"],
+        prompt=trip["prompt"],
+        total_days=trip.get("total_days", 5),
+        weather=itinerary_row.get("weather_data"),
+        places=itinerary_row.get("places_data") or {},
+        budget=trip.get("budget"),
+        start_date=start_date,
+        end_date=end_date,
+        persona_hint=trip.get("persona_hint"),
+        interests=trip.get("interests") or [],
+        constraints=trip.get("constraints") or [],
+        travel_party=trip.get("travel_party"),
+    )
 
 
 async def _regen_day(

@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.planning.schemas import ItinerarySchema
-from tests.mocks.mock_groq_responses import MOCK_PLANNER_JSON, MOCK_SYNTHESIZER_JSON
+from tests.mocks.mock_groq_responses import MOCK_SYNTHESIZER_JSON
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -27,11 +27,15 @@ BASE_TRIP = {
     "destination": "Tokyo",
     "budget": "budget",
     "total_days": 3,
+    "travel_dates": {"start": "2026-06-01", "end": "2026-06-03"},
     "title": "Trip to Tokyo",
     "summary": "A great trip.",
     "persona": "Foodie",
+    "persona_hint": "Foodie",
+    "interests": ["food", "culture"],
+    "constraints": ["vegetarian"],
+    "travel_party": "solo",
     "status": "completed",
-    "travel_dates": None,
     "created_at": "2026-06-01T00:00:00+00:00",
     "updated_at": "2026-06-01T00:00:00+00:00",
 }
@@ -160,17 +164,16 @@ class TestRegenerateRequestValidation:
 
 class TestRegenerationService:
     @pytest.mark.asyncio
-    async def test_full_trip_regen_calls_planner_and_synthesizer(self, mock_http):
-        """full_trip scope should invoke PlannerAgent then SynthesizerAgent."""
+    async def test_full_trip_regen_uses_synthesizer_only_pipeline(self, mock_http):
+        """full_trip scope should use the current synthesizer-only planning flow."""
         from app.regeneration.schemas import RegenerateRequest, RegenerateScope
 
         mock_db = MagicMock()
         _wire_db(mock_db)
 
         groq_responses = [
-            _text_response(json.dumps(MOCK_PLANNER_JSON)),     # planner
-            _text_response(json.dumps(MOCK_SYNTHESIZER_JSON)), # synthesizer
-            _text_response(json.dumps({"conflicts": []})),     # critic
+            _text_response(json.dumps(MOCK_SYNTHESIZER_JSON)),  # synthesizer
+            _text_response(json.dumps({"conflicts": []})),      # critic
         ]
 
         with patch("app.planning.agents.base_agent.openai.AsyncOpenAI") as mock_cls:
@@ -189,11 +192,42 @@ class TestRegenerationService:
         assert result["destination"] == "Tokyo"
 
     @pytest.mark.asyncio
+    async def test_full_trip_regen_restores_structured_trip_context(self, mock_http):
+        """Structured trip fields should be restored into ResearchBundle during regeneration."""
+        from app.planning.schemas import ItinerarySchema
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        with patch("app.regeneration.service.SynthesizerAgent.run_synthesis", new=AsyncMock()) as mock_synthesis:
+            mock_synthesis.return_value = ItinerarySchema.model_validate(MOCK_SYNTHESIZER_JSON)
+            with patch("app.regeneration.service.CriticAgent.run_critique", new=AsyncMock(return_value=[])):
+                from app.regeneration.service import regenerate_trip
+                await regenerate_trip(
+                    db=mock_db,
+                    http=mock_http,
+                    trip_id=TRIP_ID,
+                    request=RegenerateRequest(scope=RegenerateScope.full_trip, constraint="more vegetarian"),
+                )
+
+        call_args = mock_synthesis.await_args
+        prompt_passed = call_args.args[0]
+        research_passed = call_args.args[1]
+
+        assert "Additional constraint: more vegetarian" in prompt_passed
+        assert research_passed.start_date == "2026-06-01"
+        assert research_passed.end_date == "2026-06-03"
+        assert research_passed.persona_hint == "Foodie"
+        assert research_passed.interests == ["food", "culture"]
+        assert research_passed.constraints == ["vegetarian"]
+        assert research_passed.travel_party == "solo"
+
+    @pytest.mark.asyncio
     async def test_day_regen_replaces_only_specified_day(self, mock_http):
         """scope=day should only modify the targeted day_number."""
         import copy
         from app.regeneration.schemas import RegenerateRequest, RegenerateScope
-        from app.planning.schemas import ItinerarySchema
 
         mock_db = MagicMock()
         _wire_db(mock_db)
@@ -285,16 +319,7 @@ class TestRegenerationService:
         mock_db = MagicMock()
         _wire_db(mock_db)
 
-        captured_insert_payload: list[dict] = []
-
-        original_execute = AsyncMock(return_value=MagicMock(data=[ITINERARY_ROW]))
-
-        async def capture_execute(payload_holder, payload):
-            captured_insert_payload.append(payload)
-            return MagicMock(data=[ITINERARY_ROW])
-
         groq_responses = [
-            _text_response(json.dumps(MOCK_PLANNER_JSON)),
             _text_response(json.dumps(MOCK_SYNTHESIZER_JSON)),
             _text_response(json.dumps({"conflicts": []})),
         ]
