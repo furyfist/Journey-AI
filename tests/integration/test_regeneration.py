@@ -57,7 +57,15 @@ ITINERARY_ROW = {
 DETAIL_TRIP = {
     **BASE_TRIP,
     "itinerary": MOCK_SYNTHESIZER_JSON,
-    "conflicts": [],
+    "conflicts": [
+        {
+            "type": "timing",
+            "severity": "warning",
+            "day_number": 1,
+            "description": "Too many activities in the block",
+            "activities": ["Senso-ji Temple", "Nakamise Shopping Street"],
+        }
+    ],
     "reasoning": {},
     "weather_data": None,
 }
@@ -107,6 +115,10 @@ class TestRegenerateRequestValidation:
                 json={"scope": "full_trip"},
             )
         assert resp.status_code == 200
+        body = resp.json()
+        assert body["id"] == TRIP_ID
+        assert body["itinerary"]["destination"] == "Tokyo"
+        assert body["conflicts"][0]["type"] == "timing"
 
     def test_day_scope_requires_day_number(self, client, mock_db):
         resp = client.post(
@@ -280,6 +292,33 @@ class TestRegenerationService:
         mock_db.table.return_value.update.assert_called()
 
     @pytest.mark.asyncio
+    async def test_day_regen_forwards_constraint_to_agent(self, mock_http):
+        """Day regeneration should forward the optional natural-language constraint."""
+        from app.planning.schemas import DayPlan
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        regenerated_day = DayPlan.model_validate(MOCK_SYNTHESIZER_JSON["days"][0])
+
+        with patch("app.regeneration.service.DayRegenerationAgent.regenerate_day", new=AsyncMock(return_value=regenerated_day)) as mock_regen:
+            with patch("app.regeneration.service.CriticAgent.run_critique", new=AsyncMock(return_value=[])):
+                from app.regeneration.service import regenerate_trip
+                await regenerate_trip(
+                    db=mock_db,
+                    http=mock_http,
+                    trip_id=TRIP_ID,
+                    request=RegenerateRequest(
+                        scope=RegenerateScope.day,
+                        day_number=1,
+                        constraint="avoid temples",
+                    ),
+                )
+
+        assert mock_regen.await_args.args[3] == "avoid temples"
+
+    @pytest.mark.asyncio
     async def test_block_regen_preserves_start_end_times(self, mock_http):
         """Regenerated block must keep original start_time and end_time."""
         import copy
@@ -331,6 +370,34 @@ class TestRegenerationService:
         assert patched_itinerary.days[2].day_number == 3
 
     @pytest.mark.asyncio
+    async def test_block_regen_forwards_constraint_to_agent(self, mock_http):
+        """Block regeneration should forward the optional natural-language constraint."""
+        from app.planning.schemas import TimeBlock
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        regenerated_block = TimeBlock.model_validate(MOCK_SYNTHESIZER_JSON["days"][0]["morning"])
+
+        with patch("app.regeneration.service.BlockRegenerationAgent.regenerate_block", new=AsyncMock(return_value=regenerated_block)) as mock_regen:
+            with patch("app.regeneration.service.CriticAgent.run_critique", new=AsyncMock(return_value=[])):
+                from app.regeneration.service import regenerate_trip
+                await regenerate_trip(
+                    db=mock_db,
+                    http=mock_http,
+                    trip_id=TRIP_ID,
+                    request=RegenerateRequest(
+                        scope=RegenerateScope.single_block,
+                        day_number=1,
+                        block_label="morning",
+                        constraint="make breakfast lighter",
+                    ),
+                )
+
+        assert mock_regen.await_args.args[4] == "make breakfast lighter"
+
+    @pytest.mark.asyncio
     async def test_regen_increments_version(self, mock_http):
         """New itinerary row should have version = current_version + 1."""
         from app.regeneration.schemas import RegenerateRequest, RegenerateScope
@@ -361,6 +428,47 @@ class TestRegenerationService:
             call_args = mock_insert.call_args
             version_passed = call_args.args[2]  # (db, trip_id, version, ...)
             assert version_passed == ITINERARY_ROW["version"] + 1
+
+    @pytest.mark.asyncio
+    async def test_regen_persists_combined_pre_and_llm_conflicts(self, mock_http):
+        """insert_new_version should receive deterministic and critic conflicts together."""
+        from app.planning.schemas import Conflict, ItinerarySchema
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        pre_conflict = Conflict(
+            type="timing",
+            severity="warning",
+            day_number=1,
+            description="Block is too packed",
+            activities=["Senso-ji Temple"],
+        )
+        llm_conflict = Conflict(
+            type="persona",
+            severity="warning",
+            day_number=2,
+            description="Nightlife choice is too intense for this traveler",
+            activities=["Golden Gai"],
+        )
+
+        with patch("app.regeneration.service.SynthesizerAgent.run_synthesis", new=AsyncMock(return_value=ItinerarySchema.model_validate(MOCK_SYNTHESIZER_JSON))):
+            with patch("app.regeneration.service.run_conflict_checks", return_value=[pre_conflict]):
+                with patch("app.regeneration.service.CriticAgent.run_critique", new=AsyncMock(return_value=[llm_conflict])):
+                    with patch("app.regeneration.repository.insert_new_version", new=AsyncMock()) as mock_insert:
+                        from app.regeneration.service import regenerate_trip
+                        await regenerate_trip(
+                            db=mock_db,
+                            http=mock_http,
+                            trip_id=TRIP_ID,
+                            request=RegenerateRequest(scope=RegenerateScope.full_trip),
+                        )
+
+        persisted_conflicts = mock_insert.await_args.args[5]
+        assert [c.type for c in persisted_conflicts] == ["timing", "persona"]
+        assert persisted_conflicts[0].description == "Block is too packed"
+        assert persisted_conflicts[1].description.startswith("Nightlife choice")
 
     @pytest.mark.asyncio
     async def test_missing_itinerary_raises_trip_not_found(self, mock_http):
