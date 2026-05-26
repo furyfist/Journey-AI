@@ -72,6 +72,9 @@ export default function TripDetailPage() {
 
   const [activeDayNumber, setActiveDayNumber] = useState(1);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const visibleActiveDayNumber = itinerary?.days.some((day) => day.day_number === activeDayNumber)
+    ? activeDayNumber
+    : itinerary?.days[0]?.day_number ?? 1;
 
   const onSuccess = useCallback(
     (updated: TripDetail) => setTrip(updated),
@@ -184,7 +187,7 @@ export default function TripDetailPage() {
           <aside className="hidden w-32 shrink-0 md:block">
             <DayNav
               days={itinerary.days}
-              activeDayNumber={activeDayNumber}
+              activeDayNumber={visibleActiveDayNumber}
               onDaySelect={scrollToDay}
             />
           </aside>
@@ -193,7 +196,7 @@ export default function TripDetailPage() {
           <div className="-mx-4 sm:-mx-6 md:hidden">
             <DayNav
               days={itinerary.days}
-              activeDayNumber={activeDayNumber}
+              activeDayNumber={visibleActiveDayNumber}
               onDaySelect={scrollToDay}
             />
           </div>

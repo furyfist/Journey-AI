@@ -76,7 +76,7 @@ export interface Conflict {
 export interface TripDetail extends TripResponse {
   itinerary?: ItinerarySchema;
   conflicts?: Conflict[];
-  reasoning?: string;
+  reasoning?: Record<string, unknown>;
   weather_data?: Record<string, unknown>;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { TripCreate } from "@/lib/types/trip";
 
@@ -75,12 +75,6 @@ export default function TripDetailsForm({
   const [interests, setInterests] = useState<string[]>([]);
   const [constraints, setConstraints] = useState<string[]>([]);
   const [travelParty, setTravelParty] = useState<string>("");
-
-  useEffect(() => {
-    const p = extractFromPrompt(prompt);
-    if (p.destination) setDestination(p.destination);
-    if (p.total_days) setTotalDays(p.total_days);
-  }, [prompt]);
 
   function toggleMulti(value: string, list: string[], setter: (v: string[]) => void) {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
