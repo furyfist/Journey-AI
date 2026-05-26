@@ -27,6 +27,11 @@ class TripNotFoundError(JourneyAIError):
     message = "Trip not found"
 
 
+class InvalidRegenerationTargetError(JourneyAIError):
+    status_code = 400
+    message = "Invalid regeneration target"
+
+
 class RateLimitError(JourneyAIError):
     status_code = 429
-    message = "Rate limit reached — please try again shortly"
+    message = "Rate limit reached - please try again shortly"

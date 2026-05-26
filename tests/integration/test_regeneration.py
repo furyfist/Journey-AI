@@ -157,6 +157,24 @@ class TestRegenerateRequestValidation:
         )
         assert resp.status_code == 404
 
+    def test_day_scope_rejects_nonexistent_day(self, client, mock_db):
+        _wire_db(mock_db)
+        resp = client.post(
+            f"/api/v1/trips/{TRIP_ID}/regenerate",
+            json={"scope": "day", "day_number": 9},
+        )
+        assert resp.status_code == 400
+        assert "Cannot regenerate day 9" in resp.json()["detail"]
+
+    def test_single_block_rejects_nonexistent_day(self, client, mock_db):
+        _wire_db(mock_db)
+        resp = client.post(
+            f"/api/v1/trips/{TRIP_ID}/regenerate",
+            json={"scope": "single_block", "day_number": 9, "block_label": "morning"},
+        )
+        assert resp.status_code == 400
+        assert "Cannot regenerate day 9" in resp.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # Service unit tests — regeneration logic
@@ -364,3 +382,45 @@ class TestRegenerationService:
                 trip_id=TRIP_ID,
                 request=RegenerateRequest(scope=RegenerateScope.full_trip),
             )
+
+    @pytest.mark.asyncio
+    async def test_day_regen_invalid_target_raises_before_agent_call(self, mock_http):
+        """Invalid day_number should fail before the day regeneration agent is called."""
+        from app.core.exceptions import InvalidRegenerationTargetError
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        with patch("app.regeneration.service.DayRegenerationAgent.regenerate_day", new=AsyncMock()) as mock_regen:
+            from app.regeneration.service import regenerate_trip
+            with pytest.raises(InvalidRegenerationTargetError):
+                await regenerate_trip(
+                    db=mock_db,
+                    http=mock_http,
+                    trip_id=TRIP_ID,
+                    request=RegenerateRequest(scope=RegenerateScope.day, day_number=9),
+                )
+
+        mock_regen.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_block_regen_invalid_target_raises_before_agent_call(self, mock_http):
+        """Invalid day_number should fail before the block regeneration agent is called."""
+        from app.core.exceptions import InvalidRegenerationTargetError
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        with patch("app.regeneration.service.BlockRegenerationAgent.regenerate_block", new=AsyncMock()) as mock_regen:
+            from app.regeneration.service import regenerate_trip
+            with pytest.raises(InvalidRegenerationTargetError):
+                await regenerate_trip(
+                    db=mock_db,
+                    http=mock_http,
+                    trip_id=TRIP_ID,
+                    request=RegenerateRequest(scope=RegenerateScope.single_block, day_number=9, block_label="morning"),
+                )
+
+        mock_regen.assert_not_awaited()

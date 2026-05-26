@@ -12,7 +12,7 @@ import httpx
 from supabase import AsyncClient
 
 from app.common.logger import get_logger
-from app.core.exceptions import TripNotFoundError
+from app.core.exceptions import InvalidRegenerationTargetError, TripNotFoundError
 from app.planning.agents.critic_agent import CriticAgent
 from app.planning.agents.regeneration_agent import BlockRegenerationAgent, DayRegenerationAgent
 from app.planning.agents.synthesizer_agent import SynthesizerAgent
@@ -53,11 +53,13 @@ async def regenerate_trip(
         new_itinerary = await _regen_full(http, trip, research, request.constraint)
 
     elif request.scope == RegenerateScope.day:
+        _require_day_exists(current_itinerary, request.day_number)  # type: ignore[arg-type]
         new_itinerary = await _regen_day(
             http, current_itinerary, research, request.day_number, request.constraint  # type: ignore[arg-type]
         )
 
     else:  # single_block
+        _require_block_exists(current_itinerary, request.day_number, request.block_label)  # type: ignore[arg-type]
         new_itinerary = await _regen_block(
             http, current_itinerary, research,
             request.day_number, request.block_label,  # type: ignore[arg-type]
@@ -126,6 +128,30 @@ def _build_research_bundle(trip: dict, itinerary_row: dict) -> ResearchBundle:
         constraints=trip.get("constraints") or [],
         travel_party=trip.get("travel_party"),
     )
+
+
+def _require_day_exists(itinerary: ItinerarySchema, day_number: int) -> DayPlan:
+    day = next((d for d in itinerary.days if d.day_number == day_number), None)
+    if day is None:
+        raise InvalidRegenerationTargetError(
+            f"Cannot regenerate day {day_number}: itinerary only has days "
+            f"{', '.join(str(d.day_number) for d in itinerary.days)}"
+        )
+    return day
+
+
+def _require_block_exists(
+    itinerary: ItinerarySchema,
+    day_number: int,
+    block_label: str,
+) -> TimeBlock:
+    day = _require_day_exists(itinerary, day_number)
+    block = getattr(day, block_label, None)
+    if block is None:
+        raise InvalidRegenerationTargetError(
+            f"Cannot regenerate block '{block_label}' for day {day_number}"
+        )
+    return block
 
 
 async def _regen_day(
