@@ -221,7 +221,7 @@ journey_ai/
 ```sql
 CREATE TABLE trips (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES auth.users(id) ON DELETE CASCADE,  -- nullable legacy field for guest mode
     prompt          TEXT NOT NULL,
     destination     TEXT NOT NULL,
     budget          TEXT,                         -- "budget" | "mid-range" | "luxury"
@@ -657,7 +657,7 @@ The regeneration service (`app/regeneration/service.py`) restores `ResearchBundl
 ### Three scopes
 
 #### `full_trip`
-Runs `PlannerAgent.run_planning()` → `SynthesizerAgent.run_synthesis()` with optional `constraint` appended to the prompt. Uses cached research.
+Runs the current synthesizer-only planning flow with cached research. Structured trip context (`persona_hint`, `interests`, `constraints`, `travel_party`, travel dates) is restored from the persisted trip row, and an optional `constraint` is appended to the prompt.
 
 #### `day`
 Runs `DayRegenerationAgent.regenerate_day()` for the specified `day_number`. Patches the day in a deep copy of the itinerary, preserving `day_number`, `date`, and `weather` from the original.
@@ -670,10 +670,23 @@ Runs `BlockRegenerationAgent.regenerate_block()` for the specified `day_number` 
 1. Fetch current active itinerary row
 2. Generate new itinerary
 3. Run full conflict checks (deterministic + critic)
-4. deactivate_itinerary(old_row_id)      → is_active = false
+4. deactivate all active itinerary rows for the trip
 5. insert_new_version(version + 1, ...)  → is_active = true
 6. Return updated TripDetail
 ```
+
+### Validation and live verification
+
+- Invalid regeneration targets fail early with `400` before any LLM call:
+  - missing day in `scope=day`
+  - missing day/block in `scope=single_block`
+- `day` regeneration preserves `day_number`, `date`, and `weather`
+- `single_block` regeneration preserves `label`, `start_time`, and `end_time`
+- `GET /trips/{id}` and regeneration both prefer the latest active itinerary by `version desc`
+- Live verification on May 27, 2026 confirmed:
+  - `full_trip`, `day`, and `single_block` regeneration all returned updated `TripDetail` payloads
+  - exactly one active itinerary remained after repeated regenerations on a real trip
+  - one attempted block regeneration briefly hit a Groq rate-limit response, then succeeded on retry
 
 ### Constraint injection
 For `full_trip` and `day`/`single_block`, an optional `constraint` string (max 500 chars) is injected into the agent prompt: `"Additional constraint: {constraint}"`. This is the "one-line replan" feature.
@@ -768,7 +781,7 @@ All other variables have defaults. `cors_origins` must include the frontend URL 
 
 **Test command:** `venv/Scripts/python -m pytest tests/ -v`
 
-**Total: 94 tests passing**
+The focused regeneration and trip endpoint suites were re-verified on May 27, 2026 after the regeneration hardening work.
 
 ### Test layout
 
@@ -814,9 +827,12 @@ All other variables have defaults. `cors_origins` must include the frontend URL 
 
 ### Current branch: `frontend/pages`
 
+### Current product direction
+- Guest-mode app flow: authentication is not part of the active roadmap
+- Regeneration flow is implemented, tested, and live-verified end to end
+
 ### Planned (Session 5+ remaining)
-- Regeneration endpoint (in code, tests pending)
-- Supabase Auth integration (user-scoped trips)
+- Deployment / production polish
 - Railway deployment
 
 ---
