@@ -43,7 +43,7 @@ def _wire_db(mock_db: MagicMock, trip: dict = SAMPLE_TRIP) -> None:
     )
 
     # SELECT active itinerary join (returns empty — no itinerary yet)
-    tb.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = AsyncMock(
+    tb.select.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute = AsyncMock(
         return_value=MagicMock(data=[])
     )
 

@@ -72,12 +72,13 @@ def _wire_db(mock_db: MagicMock) -> None:
         return_value=MagicMock(data=BASE_TRIP)
     )
     # fetch_active_itinerary  (select * eq eq limit)
-    tb.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = AsyncMock(
+    tb.select.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute = AsyncMock(
         return_value=MagicMock(data=[ITINERARY_ROW])
     )
     # fetch_trip_detail — active itinerary join (second eq.eq.limit call returns empty for detail)
     # We need the detail call to work too — wire update and insert
     tb.update.return_value.eq.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
+    tb.update.return_value.eq.return_value.eq.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
     tb.insert.return_value.execute = AsyncMock(return_value=MagicMock(data=[ITINERARY_ROW]))
     # Health check probe
     tb.select.return_value.limit.return_value.execute = AsyncMock(return_value=MagicMock(data=[]))
@@ -370,7 +371,7 @@ class TestRegenerationService:
         mock_db = MagicMock()
         _wire_db(mock_db)
         # Override active itinerary query to return empty
-        mock_db.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = (
+        mock_db.table.return_value.select.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute = (
             AsyncMock(return_value=MagicMock(data=[]))
         )
 
@@ -403,6 +404,36 @@ class TestRegenerationService:
                 )
 
         mock_regen.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_regen_deactivates_all_active_versions_for_trip(self, mock_http):
+        """Version swap should deactivate all active rows for the trip, not a single itinerary id."""
+        from app.regeneration.schemas import RegenerateRequest, RegenerateScope
+
+        mock_db = MagicMock()
+        _wire_db(mock_db)
+
+        groq_responses = [
+            _text_response(json.dumps(MOCK_SYNTHESIZER_JSON)),
+            _text_response(json.dumps({"conflicts": []})),
+        ]
+
+        with patch("app.planning.agents.base_agent.openai.AsyncOpenAI") as mock_cls:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create = AsyncMock(side_effect=groq_responses)
+            mock_cls.return_value = mock_client
+
+            from app.regeneration.service import regenerate_trip
+            await regenerate_trip(
+                db=mock_db,
+                http=mock_http,
+                trip_id=TRIP_ID,
+                request=RegenerateRequest(scope=RegenerateScope.full_trip),
+            )
+
+        mock_db.table.return_value.update.assert_any_call({"is_active": False})
+        deactivate_chain = mock_db.table.return_value.update.return_value.eq.return_value.eq.return_value
+        deactivate_chain.execute.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_block_regen_invalid_target_raises_before_agent_call(self, mock_http):

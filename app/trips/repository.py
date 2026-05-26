@@ -40,6 +40,7 @@ async def fetch_trip_detail(db: AsyncClient, trip_id: str) -> dict:
         .select("itinerary_data, conflicts, reasoning, weather_data")
         .eq("trip_id", trip_id)
         .eq("is_active", True)
+        .order("version", desc=True)
         .limit(1)
         .execute()
     )

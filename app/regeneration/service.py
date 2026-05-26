@@ -72,8 +72,8 @@ async def regenerate_trip(
     llm_conflicts = await critic.run_critique(new_itinerary, pre_conflicts, research)
     all_conflicts: list[Conflict] = pre_conflicts + llm_conflicts
 
-    # Atomic version swap: deactivate old → insert new.
-    await regen_repo.deactivate_itinerary(db, itinerary_row["id"])
+    # Best-effort version swap: deactivate any active rows for the trip, then insert the next version.
+    await regen_repo.deactivate_active_itineraries(db, trip_id)
     await regen_repo.insert_new_version(
         db, trip_id, current_version + 1, new_itinerary, research, all_conflicts
     )

@@ -11,14 +11,21 @@ async def fetch_active_itinerary(db: AsyncClient, trip_id: str) -> dict | None:
         .select("*")
         .eq("trip_id", trip_id)
         .eq("is_active", True)
+        .order("version", desc=True)
         .limit(1)
         .execute()
     )
     return result.data[0] if result.data else None
 
 
-async def deactivate_itinerary(db: AsyncClient, itinerary_id: str) -> None:
-    await db.table("itineraries").update({"is_active": False}).eq("id", itinerary_id).execute()
+async def deactivate_active_itineraries(db: AsyncClient, trip_id: str) -> None:
+    await (
+        db.table("itineraries")
+        .update({"is_active": False})
+        .eq("trip_id", trip_id)
+        .eq("is_active", True)
+        .execute()
+    )
 
 
 async def insert_new_version(
