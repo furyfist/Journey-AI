@@ -2,9 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Map, Camera } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Camera } from "lucide-react";
 import PageWrapper from "@/components/shared/PageWrapper";
 import { fetchPhoto, type PhotoResult } from "@/lib/api/photos";
+
+// Dynamically import InteractiveMap to prevent Next.js SSR window reference errors
+const InteractiveMap = dynamic(
+  () => import("./InteractiveMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-muted/40 animate-pulse rounded-2xl flex items-center justify-center border border-border">
+        <div className="flex flex-col items-center gap-2 text-text-muted">
+          <div className="h-5 w-5 rounded-full border-2 border-accent-sage border-t-transparent animate-spin" />
+          <span className="text-xs">Loading live interactive map...</span>
+        </div>
+      </div>
+    ),
+  }
+);
 
 // ---------------------------------------------------------------------------
 // Static panel data — the activities and city metadata stay here;
@@ -158,6 +175,8 @@ function DestinationPhoto({ city }: DestinationPhotoProps) {
 // ---------------------------------------------------------------------------
 
 export default function DestinationsShowcase() {
+  const [activeCityIndex, setActiveCityIndex] = useState<number | null>(null);
+
   return (
     <section id="explore" className="py-20 sm:py-24 bg-muted/40">
       <PageWrapper>
@@ -171,44 +190,55 @@ export default function DestinationsShowcase() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {PANELS.map(({ city, weather, activities }) => (
-            <div key={city} className="bg-surface border border-border rounded-2xl overflow-hidden">
-              {/* Card header */}
-              <div className="px-5 py-4 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-text-primary">{city}</span>
-                  <span className="text-sm text-text-secondary">{weather}</span>
+          {PANELS.map(({ city, weather, activities }, idx) => {
+            const isActive = activeCityIndex === idx;
+            return (
+              <div
+                key={city}
+                onClick={() => setActiveCityIndex(isActive ? null : idx)}
+                className={`bg-surface border rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ${
+                  isActive
+                    ? "border-accent-sage ring-2 ring-accent-sage/20 shadow-md scale-[1.01]"
+                    : "border-border hover:border-text-muted/40 shadow-sm"
+                }`}
+              >
+                {/* Card header */}
+                <div className="px-5 py-4 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-text-primary">{city}</span>
+                    <span className="text-sm text-text-secondary">{weather}</span>
+                  </div>
+                </div>
+
+                {/* Activity list */}
+                <div className="px-5 py-3 space-y-3">
+                  {activities.map(({ time, name, tag, tagColor }) => (
+                    <div key={time} className="flex items-center gap-3">
+                      <span className="text-xs text-text-muted w-[72px] shrink-0">{time}</span>
+                      <div className="h-4 w-4 rounded-full bg-muted shrink-0" />
+                      <span className="text-sm text-text-primary flex-1 min-w-0 truncate">{name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium ${tagColor}`}>
+                        {tag}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Destination photo */}
+                <div className="px-5 pb-5 pt-2">
+                  <DestinationPhoto city={city} />
                 </div>
               </div>
-
-              {/* Activity list */}
-              <div className="px-5 py-3 space-y-3">
-                {activities.map(({ time, name, tag, tagColor }) => (
-                  <div key={time} className="flex items-center gap-3">
-                    <span className="text-xs text-text-muted w-[72px] shrink-0">{time}</span>
-                    <div className="h-4 w-4 rounded-full bg-muted shrink-0" />
-                    <span className="text-sm text-text-primary flex-1 min-w-0 truncate">{name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-medium ${tagColor}`}>
-                      {tag}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Destination photo */}
-              <div className="px-5 pb-5 pt-2">
-                <DestinationPhoto city={city} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Map placeholder — unchanged */}
-        <div className="relative w-full rounded-2xl bg-muted aspect-[16/5] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2 text-text-muted">
-            <Map size={32} />
-            <p className="text-sm">Interactive map — coming soon</p>
-          </div>
+        {/* Live Interactive Map */}
+        <div className="relative w-full rounded-2xl aspect-[16/6] md:aspect-[16/5] min-h-[320px] overflow-hidden">
+          <InteractiveMap
+            activeCityIndex={activeCityIndex}
+            onSelectCity={setActiveCityIndex}
+          />
         </div>
       </PageWrapper>
     </section>
