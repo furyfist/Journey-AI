@@ -10,6 +10,7 @@ from app.core.database import create_db_client
 from app.core.exception_handlers import register_exception_handlers
 from app.health.router import router as health_router
 from app.trips.router import router as trips_router
+from app.photos.router import router as photos_router
 from app.places.router import router as places_router
 from app.weather.router import router as weather_router
 from app.regeneration.router import router as regeneration_router
@@ -51,5 +52,6 @@ register_exception_handlers(app)
 app.include_router(health_router, prefix=API_PREFIX)
 app.include_router(trips_router, prefix=API_PREFIX)
 app.include_router(regeneration_router, prefix=API_PREFIX)
+app.include_router(photos_router, prefix=API_PREFIX)
 app.include_router(weather_router, prefix=API_PREFIX)
 app.include_router(places_router, prefix=API_PREFIX)
