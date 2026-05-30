@@ -31,10 +31,27 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
     if (!mapContainerRef.current) return;
 
     let map: any;
+    let isUnmounted = false;
 
     // Load Leaflet dynamically inside useEffect to ensure it only runs in the browser
     import("leaflet").then((L) => {
-      if (!mapContainerRef.current) return;
+      if (isUnmounted || !mapContainerRef.current) return;
+
+      // Safe check: If a map instance already exists, remove it first
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          console.warn("Failed to remove previous map instance", e);
+        }
+        mapInstanceRef.current = null;
+      }
+
+      // Safe check: Reset DOM marker that Leaflet uses to track initialization
+      const container = mapContainerRef.current;
+      if (container && (container as any)._leaflet_id) {
+        (container as any)._leaflet_id = null;
+      }
 
       // Fix Leaflet's default marker icon relative asset resolution issue
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -68,7 +85,7 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
 
       const defaultCenter = [35.668, 139.68] as [number, number]; // Centered between Tokyo and Shibuya
 
-      map = L.map(mapContainerRef.current, {
+      map = L.map(container, {
         center: defaultCenter,
         zoom: 12.2,
         zoomControl: false, // Standard controls look clunky, we will customize or place carefully
@@ -93,7 +110,7 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
 
       // Force size invalidation to fix the standard Leaflet "partial container render" layout bug
       setTimeout(() => {
-        if (map) {
+        if (map && !isUnmounted) {
           map.invalidateSize();
         }
       }, 150);
@@ -128,8 +145,14 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
     });
 
     return () => {
-      if (map) {
-        map.remove();
+      isUnmounted = true;
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          console.warn("Failed to remove map instance on unmount", e);
+        }
+        mapInstanceRef.current = null;
       }
     };
   }, []);
