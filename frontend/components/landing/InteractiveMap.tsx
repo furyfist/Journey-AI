@@ -80,12 +80,23 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
       // Add high-quality custom Zoom control to the bottom right
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      // CartoDB Positron - light, sleek, minimalist, perfectly fitting the aesthetic
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 20,
+      // Esri Light Gray Canvas Base (sleek, minimalist, premium gray aesthetic)
+      L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+        attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 16,
       }).addTo(map);
+
+      // Esri Light Gray Canvas Reference (renders all labels in English globally)
+      L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 16,
+      }).addTo(map);
+
+      // Force size invalidation to fix the standard Leaflet "partial container render" layout bug
+      setTimeout(() => {
+        if (map) {
+          map.invalidateSize();
+        }
+      }, 150);
 
       // Plot the markers
       const markers = DESTINATIONS.map((dest, idx) => {
@@ -127,6 +138,9 @@ export default function InteractiveMap({ activeCityIndex, onSelectCity }: Intera
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
+
+    // Force map to recalculate container size on index updates to prevent layout clipping
+    map.invalidateSize();
 
     import("leaflet").then((L) => {
       const createCustomIcon = (isActive: boolean) => {
