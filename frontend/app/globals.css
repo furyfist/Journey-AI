@@ -116,6 +116,12 @@
 
 /* Journey AI is light-only by design — no dark mode */
 
+@keyframes shimmer {
+  100% {
+    transform: translateX(200%);
+  }
+}
+
 @keyframes log-in {
   from {
     opacity: 0;
