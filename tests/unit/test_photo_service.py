@@ -8,6 +8,9 @@ Tests cover:
 - Results with no usable URL return a fallback PhotoResult.
 - RateLimitError from the client returns a fallback (does not raise).
 - ExternalAPIError from the client returns a fallback (does not raise).
+- Cache hit returns the stored result without calling Unsplash.
+- Successful fetch result is written to the cache.
+- Fallback result is NOT written to the cache.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -16,12 +19,21 @@ import pytest
 
 from app.core.exceptions import ExternalAPIError, RateLimitError
 from app.photos import service as photos_service
+from app.photos.cache import photo_cache
 from app.photos.schemas import PhotoResult
 from tests.mocks.mock_photo_data import (
     UNSPLASH_SEARCH_RESPONSE_EMPTY,
     UNSPLASH_SEARCH_RESPONSE_NO_URL,
     UNSPLASH_SEARCH_RESPONSE_ONE_RESULT,
 )
+
+
+@pytest.fixture(autouse=True)
+def fresh_cache():
+    """Clear the module-level photo cache before every test."""
+    photo_cache.clear()
+    yield
+    photo_cache.clear()
 
 
 def _make_http_with_data(json_response: dict) -> AsyncMock:
@@ -184,3 +196,66 @@ async def test_fetch_photo_fallback_preserves_original_query():
         result = await photos_service.fetch_photo(http, "My Special Destination")
 
     assert result.query == "My Special Destination"
+
+
+# ---------------------------------------------------------------------------
+# Cache integration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_skips_unsplash_call():
+    """A cached result must be returned without touching search_photos."""
+    from app.photos.schemas import PhotoResult
+
+    stored = PhotoResult(
+        query="Tokyo",
+        image_url="https://images.unsplash.com/photo-cached?w=1080",
+        thumb_url="https://images.unsplash.com/photo-cached?w=200",
+        alt_text="Cached Tokyo",
+        photographer_name="Cache Person",
+        photographer_url="https://unsplash.com/@cache",
+        unsplash_page_url="https://unsplash.com/photos/cached",
+        source="unsplash",
+    )
+    photo_cache.set("Tokyo", stored)
+
+    mock_search = AsyncMock(return_value={})
+    http = AsyncMock()
+    with patch("app.photos.service.search_photos", mock_search):
+        result = await photos_service.fetch_photo(http, "Tokyo")
+
+    mock_search.assert_not_awaited()
+    assert result is stored
+
+
+@pytest.mark.asyncio
+async def test_successful_fetch_populates_cache():
+    """A successful Unsplash response must be written to the cache."""
+    from tests.mocks.mock_photo_data import UNSPLASH_SEARCH_RESPONSE_ONE_RESULT
+
+    http = AsyncMock()
+    with patch(
+        "app.photos.service.search_photos",
+        AsyncMock(return_value=UNSPLASH_SEARCH_RESPONSE_ONE_RESULT),
+    ):
+        result = await photos_service.fetch_photo(http, "Tokyo")
+
+    assert result.source == "unsplash"
+    cached = photo_cache.get("Tokyo")
+    assert cached is not None
+    assert cached.source == "unsplash"
+
+
+@pytest.mark.asyncio
+async def test_fallback_result_not_cached():
+    """A fallback result (Unsplash unavailable) must not be written to cache."""
+    http = AsyncMock()
+    with patch(
+        "app.photos.service.search_photos",
+        AsyncMock(side_effect=ExternalAPIError("down")),
+    ):
+        result = await photos_service.fetch_photo(http, "Ghostville")
+
+    assert result.source == "fallback"
+    assert photo_cache.get("Ghostville") is None

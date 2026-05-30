@@ -2,20 +2,37 @@
 
 Responsibilities:
 - Apply query-cleaning heuristics before hitting Unsplash.
+- Check the in-memory TTL cache before making any upstream call.
 - Call the client and normalize the raw response into the app's internal
   PhotoResult schema.
+- Write successful results back to the cache.
+- Guard against duplicate in-flight requests for the same query in a
+  single event-loop cycle (dedup via an in-progress set).
 - Return a safe fallback object when no result is found or the upstream
   call fails, so a missing photo never breaks a page render.
 """
 
+import asyncio
 import httpx
 
 from app.common.logger import get_logger
 from app.core.exceptions import ExternalAPIError, RateLimitError
+from app.photos.cache import photo_cache
 from app.photos.client import search_photos
 from app.photos.schemas import PhotoResult
 
 logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# In-flight dedup guard
+# Tracks queries whose Unsplash fetch is currently awaited.  Any second
+# coroutine that arrives for the same query while the first is still in
+# flight will wait for an asyncio.Event instead of issuing a duplicate
+# upstream call.
+# ---------------------------------------------------------------------------
+_in_progress: dict[str, asyncio.Event] = {}
+_in_progress_results: dict[str, PhotoResult] = {}
+
 
 # ---------------------------------------------------------------------------
 # Curated query overrides
@@ -109,6 +126,12 @@ def _fallback(raw_query: str) -> PhotoResult:
 async def fetch_photo(http: httpx.AsyncClient, query: str) -> PhotoResult:
     """Return one normalized photo for *query*, or a fallback if unavailable.
 
+    Lookup order:
+    1. In-memory TTL cache (keyed by normalized query string).
+    2. In-flight dedup: if another coroutine is already fetching the same
+       query, wait for its result instead of issuing a duplicate request.
+    3. Live Unsplash call via the client module.
+
     This function never raises — it logs failures and returns a fallback
     PhotoResult so that the absence of a photo never causes a 500.
 
@@ -120,6 +143,24 @@ async def fetch_photo(http: httpx.AsyncClient, query: str) -> PhotoResult:
         A PhotoResult with source="unsplash" on success, or source="fallback"
         when Unsplash is unavailable or returned no matching photos.
     """
+    cache_key = query.strip().lower()
+
+    # --- 1. Cache hit ---
+    cached = photo_cache.get(query)
+    if cached is not None:
+        return cached
+
+    # --- 2. In-flight dedup ---
+    if cache_key in _in_progress:
+        logger.debug("Photo fetch dedup: waiting for in-flight query=%r", query)
+        event = _in_progress[cache_key]
+        await event.wait()
+        return _in_progress_results.get(cache_key, _fallback(query))
+
+    # --- 3. Live fetch — register in-progress event ---
+    event = asyncio.Event()
+    _in_progress[cache_key] = event
+
     search_query = _clean_query(query)
     logger.debug("Fetching Unsplash photo: original=%r search=%r", query, search_query)
 
@@ -127,15 +168,24 @@ async def fetch_photo(http: httpx.AsyncClient, query: str) -> PhotoResult:
         data = await search_photos(http, search_query)
     except RateLimitError:
         logger.warning("Unsplash rate limit — returning fallback for query=%r", query)
-        return _fallback(query)
+        result = _fallback(query)
     except ExternalAPIError as exc:
         logger.warning("Unsplash error for query=%r: %s — returning fallback", query, exc)
-        return _fallback(query)
+        result = _fallback(query)
+    else:
+        normalized = _normalize(query, data)
+        if normalized is None:
+            logger.info("No Unsplash results for query=%r (searched %r)", query, search_query)
+            result = _fallback(query)
+        else:
+            logger.debug("Photo fetched: query=%r url=%s", query, normalized.image_url)
+            result = normalized
+            photo_cache.set(query, result)   # only caches source="unsplash"
 
-    result = _normalize(query, data)
-    if result is None:
-        logger.info("No Unsplash results for query=%r (searched %r)", query, search_query)
-        return _fallback(query)
+    # Signal waiting coroutines and clean up
+    _in_progress_results[cache_key] = result
+    event.set()
+    _in_progress.pop(cache_key, None)
+    _in_progress_results.pop(cache_key, None)
 
-    logger.debug("Photo fetched: query=%r url=%s", query, result.image_url)
     return result
