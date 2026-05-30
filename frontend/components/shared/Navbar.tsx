@@ -25,20 +25,7 @@ export default function Navbar() {
             </a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <a
-              href="#prompt"
-              className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Sign in
-            </a>
-            <a
-              href="#prompt"
-              className="px-4 py-2 text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue-dark rounded-lg transition-colors"
-            >
-              Sign Up
-            </a>
-          </div>
+
         </nav>
       </PageWrapper>
     </header>
