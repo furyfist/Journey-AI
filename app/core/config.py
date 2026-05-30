@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     groq_max_tokens: int = 8192
     groq_temperature: float = 0.7
 
+    unsplash_access_key: str = ""
+    unsplash_secret_key: str = ""
+    unsplash_base_url: str = "https://api.unsplash.com"
+
     open_meteo_base_url: str = "https://api.open-meteo.com/v1"
     overpass_api_url: str = "https://overpass-api.de/api/interpreter"
     geocoding_api_url: str = "https://geocoding-api.open-meteo.com/v1/search"
