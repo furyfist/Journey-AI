@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Sparkles, PlayCircle } from "lucide-react";
 import PageWrapper from "@/components/shared/PageWrapper";
 import VideoModal from "@/components/shared/VideoModal";
@@ -11,6 +12,7 @@ import TripDetailsForm from "@/components/landing/TripDetailsForm";
 import { createTrip } from "@/lib/api/trips";
 import { useGenerateStore } from "@/store/generate";
 import type { TripCreate } from "@/lib/types/trip";
+import { useDestinationPhoto } from "@/hooks/useDestinationPhoto";
 
 const DEMO_ACTIVITIES = [
   { time: "9:00 AM", name: "Tsukiji Outer Market", tag: "Food", tagColor: "bg-orange-50 text-orange-600" },
@@ -19,6 +21,41 @@ const DEMO_ACTIVITIES = [
 ];
 
 type Step = "prompt" | "details";
+
+// Three distinct Tokyo scenes for the hero demo card
+const DEMO_PHOTO_QUERIES = [
+  "Senso-ji Temple Tokyo",
+  "Shibuya crossing night",
+  "Mount Fuji Japan",
+] as const;
+
+function DemoPhoto({ query }: { query: string }) {
+  const { photo, status } = useDestinationPhoto(query);
+
+  if (status === "loading") {
+    return (
+      <div className="flex-1 aspect-video bg-muted rounded-lg overflow-hidden relative">
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      </div>
+    );
+  }
+
+  if (status === "error" || !photo || photo.source === "fallback" || !photo.image_url) {
+    return <div className="flex-1 aspect-video bg-muted rounded-lg" />;
+  }
+
+  return (
+    <div className="flex-1 aspect-video rounded-lg overflow-hidden relative">
+      <Image
+        src={photo.image_url}
+        alt={photo.alt_text ?? query}
+        fill
+        sizes="(max-width: 1024px) 33vw, 200px"
+        className="object-cover"
+      />
+    </div>
+  );
+}
 
 export default function HeroSection() {
   const router = useRouter();
@@ -139,9 +176,9 @@ export default function HeroSection() {
                 </div>
 
                 <div className="px-6 py-4 flex gap-3">
-                  <div className="flex-1 aspect-video bg-muted rounded-lg" />
-                  <div className="flex-1 aspect-video bg-muted rounded-lg" />
-                  <div className="flex-1 aspect-video bg-muted rounded-lg" />
+                  {DEMO_PHOTO_QUERIES.map((q) => (
+                    <DemoPhoto key={q} query={q} />
+                  ))}
                 </div>
 
                 <div className="px-6 pb-4 space-y-2.5">
